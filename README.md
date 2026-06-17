@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icons/icon128.png" width="96" alt="Picona">
+<img src="icon128.png" width="96" alt="Picona">
 
 # Picona
 
