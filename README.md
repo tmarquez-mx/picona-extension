@@ -1,81 +1,93 @@
+<div align="center">
 
-# Picona extensión de Chrome
+<img src="icons/icon128.png" width="96" alt="Picona">
 
-Picona es una extensión de Chrome para trabajar y anotar la información que navegas (páginas, videos, podcasts, etc). 
-Permite conectar servicios de IA mediante API, resumir páginas, traducir, etc y registrar ideas en memos y construir una base de conocimiento exportable.
+# Picona
 
-## Funciones principales
+### De horas de navegación a pensamiento documentado y conectado
 
-- Configuración API.
-- Resumen de páginas web.
-- Traducción y transcripción.
-- Exportación de páginas como PDF limpio
-- Investigación profunda por pestañas
-- Registro de memos cualitativios (libres; de página, diario)
-- Organización de ideas en red.
-- Exportación para trabajo posterior en otros entornos (Obsidian; OneNote; MaxQDA, etc.)
+*Extensión de navegador para investigación asistida por IA, con un sistema de notas de procedencia inspirado en el análisis cualitativo.*
 
-## Estado del proyecto
+Prueba de concepto · Manifest V3 · Versión 2.7.2
 
-Versión beta
+</div>
 
+---
 
+## Resumen
 
-## Estructura
+**Picona** es una extensión para navegadores basados en Chromium que acompaña al investigador mientras lee en la web. Se presenta como un panel lateral, junto a la página activa, y reúne en un mismo espacio la conversación con un modelo de lenguaje, el resumen y la traducción de contenidos, la generación de versiones de lectura en PDF, y -su componente distintivo- un **sistema de memos con procedencia**.
+
+El proyecto parte de una premisa: el valor de la investigación no está solo en *leer* mucho, sino en *registrar y conectar* lo que se piensa mientras se lee. Picona busca convertir las horas de navegación en una base de conocimiento trazable, donde cada nota conserva de dónde salió, en qué contexto y cómo se relaciona con las demás.
+
+## Fundamento conceptual
+
+El sistema de memos se inspira en las prácticas de **análisis cualitativo** (por ejemplo, los *memos* analíticos y la codificación en herramientas como MAXQDA o Atlas.ti) y en los principios de los gestores de conocimiento en red. Cada memo articula tres dimensiones:
+
+- **Procedencia** - de qué fuente proviene (URL, título, fecha y la cita textual que lo originó).
+- **Contexto** - a qué proyecto pertenece, con qué etiquetas se clasifica.
+- **Conexión** - cómo se vincula con otros memos a través de etiquetas compartidas, formando una red navegable de ideas.
+
+Esta orientación responde a una preocupación pedagógica más amplia: promover un uso de la inteligencia artificial que sea **reflexivo y crítico**, donde la herramienta apoye el pensamiento del investigador sin sustituirlo, y donde quede registro transparente de cómo se construyó el conocimiento.
+
+## Funcionalidades
+
+| Función | Descripción |
+|---|---|
+| **Chat contextual** | Conversación con un modelo de IA, con la opción de incorporar el contenido de la página activa. |
+| **Resumen** | Resúmenes estructurados de artículos, *papers* y documentos web. |
+| **Traducción bilingüe** | Original y traducción intercalados por párrafo, para lectura académica en otros idiomas. |
+| **PDF en modo lectura** | Versión limpia (sin elementos accesorios) de la página, exportable a PDF. |
+| **Investigación multi-pestaña** | Síntesis conjunta de varias pestañas abiertas. |
+| **Análisis de videos** | Resumen, ideas clave con marcas de tiempo, esquema, transcripción y consulta sobre el contenido. |
+| **Barra flotante** | Acciones rápidas (explicar, traducir, resumir, guardar memo) al seleccionar texto. |
+| **Sistema de memos** | Notas con procedencia, etiquetas, proyectos, tipos (libre / de página / diario) y red de conexiones. |
+| **Exportación** | Markdown, CSV, JSON, vault de Obsidian (con enlaces automáticos) y HTML enriquecido. |
+
+## Arquitectura y privacidad
+
+Picona está construida sobre **Manifest V3** y opera bajo un principio de **privacidad por diseño**:
+
+- **Sin servidores propios.** El proyecto no opera infraestructura que reciba o almacene datos de los usuarios.
+- **Almacenamiento local.** Todos los memos, el historial y la configuración residen en el navegador del usuario (`chrome.storage.local`).
+- **Modelo "trae tu propia clave".** El usuario conecta su propio proveedor de IA mediante una clave de API; las solicitudes viajan directamente del navegador al proveedor elegido, sin intermediación. La clave nunca abandona el equipo del usuario salvo hacia ese proveedor.
 
 ```
 picona-extension/
 ├── manifest.json        # Manifest V3
-├── background.js        # Service worker: side panel, context menus, inyección
-├── content.js           # Barra flotante de selección (Sider-style)
-├── icons/
-└── sidepanel/
-    ├── index.html
-    ├── style.css
-    └── app.js            # Lógica principal (~1400 líneas)
+├── background.js        # Service worker: panel lateral, menús, extracción de contenido
+├── content.js           # Barra flotante de selección
+├── sidepanel/
+│   ├── index.html       # Interfaz del panel
+│   ├── app.js           # Lógica de la aplicación
+│   └── style.css        # Estilos
+└── icons/               # Iconografía (16 / 48 / 128 px)
 ```
 
-## Cómo probar localmente
+## Instalación (modo desarrollador)
 
-1. `chrome://extensions` → activar "Modo de desarrollador"
-2. "Cargar extensión sin empaquetar" → seleccionar esta carpeta
-3. Para ver logs del panel lateral: clic derecho dentro del panel → Inspeccionar
-4. Para ver logs del background/service worker: en `chrome://extensions`,
-   clic en "service worker" bajo Picona
-5. Tras editar código: botón ↻ en `chrome://extensions`. Si tocas
-   `manifest.json` o permisos, **quita y vuelve a cargar** la extensión
-   completa (↻ no siempre basta).
+1. Descargar o clonar este repositorio.
+2. Abrir `chrome://extensions` en un navegador basado en Chromium.
+3. Activar el **Modo de desarrollador** (esquina superior derecha).
+4. Pulsar **Cargar descomprimida** y seleccionar la carpeta del proyecto.
+5. Abrir el panel de Picona y conectar un proveedor de IA con una clave de API propia.
 
-## Notas importantes para Claude Code
+> Para usar las funciones de IA se requiere una clave de API de un proveedor compatible. Algunos proveedores ofrecen acceso gratuito; también pueden utilizarse modelos locales.
 
-- **`chrome.sidePanel.open()`** desde content scripts requiere usar
-  `chrome.runtime.connect` (Port), NO `chrome.runtime.sendMessage`
-  — ver `background.js` → `onConnect` ("picona-toolbar"). Es un bug
-  conocido de Chrome (crbug.com/40929586).
-- **Patrones de URL para `chrome.tabs.query`** deben incluir `/*`
-  (ej. `'https://claude.ai/*'`), nunca `'https://claude.ai*'` — Chrome
-  lo rechaza como patrón inválido.
-- **Sin handlers `onclick=""` inline** en HTML generado dinámicamente
-  — viola la CSP de Manifest V3. Usar siempre `addEventListener` tras
-  insertar el HTML (ver `renderProviders`, `renderServiceGrid`, etc.).
-- Las API keys se guardan en `chrome.storage.local` bajo
-  `picona_providers` / `picona_active`. Los memos en `picona_memos`.
-  Nunca se envían a servidores propios.
+## Estado del proyecto
 
-## Pendientes / ideas (ver conversación previa)
+Prueba de concepto funcional. La extensión se encuentra en proceso de revisión para su publicación en la tienda de extensiones, y en evaluación con usuarios.
 
-- Vista bilingüe de traducción (lado a lado)
-- Resumen de YouTube (transcripción)
-- Soporte de PDFs (pdf.js)
-- Historial de conversaciones (similar a memos)
-- Política de privacidad pública (requerido para Chrome Web Store)
-- Modo demo sin API key para onboarding
+## Contexto
 
-## Antes de publicar en Chrome Web Store
+Picona se desarrolla en el marco de la docencia e investigación sobre **alfabetización y uso crítico de la inteligencia artificial en contextos académicos**, en el Departamento de Ciencias Sociales y Políticas de la Universidad Iberoamericana Ciudad de México (IBERO).
 
-- Redactar política de privacidad pública (URL)
-- Justificar permisos amplios (`<all_urls>`, hosts de IA) en la
-  descripción del listing
-- Explicar con claridad la función de "suscripción web" (inyección
-  en sitios de terceros) — riesgo de rechazo bajo políticas de
-  manipulación de UX si no se explica bien
+## Privacidad
+
+Política de privacidad: https://tmarquez-mx.github.io/picona/
+
+---
+
+<div align="center">
+<em>Lee, reflexiona, registra y conecta.</em>
+</div>
