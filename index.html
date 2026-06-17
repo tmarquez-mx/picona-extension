@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picona</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="logo">
+      <img src="../icons/icon48.png" class="logo-img" alt="Picona">
+      <span class="logo-text">Picona</span>
+    </div>
+    <button class="model-pill" id="modelPill">
+      <span class="model-pill-dot" id="modelPillDot"></span>
+      <span id="modelPillText">Sin modelo</span>
+      <svg width="9" height="6" viewBox="0 0 9 6" fill="none">
+        <path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="settingsBtn" title="Configuración">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- ── Mode tabs ───────────────────────────────────────────── -->
+  <nav class="mode-tabs">
+    <button class="mode-tab active" data-mode="chat">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>Chat
+    </button>
+    <button class="mode-tab" data-mode="summarize">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="10" x2="3" y2="10"/>
+        <line x1="21" y1="14" x2="3" y2="14"/><line x1="14" y1="18" x2="3" y2="18"/>
+      </svg>Resumir
+    </button>
+    <button class="mode-tab" data-mode="research">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>Investigar
+    </button>
+    <button class="mode-tab" data-mode="translate">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
+      </svg>Traducir
+    </button>
+    <button class="mode-tab" data-mode="memos">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M14 3v4a1 1 0 001 1h4"/><path d="M5 12V5a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2H7a2 2 0 01-2-2v-2"/>
+        <path d="M9 13h2M9 17h2"/><path d="M3 17l3 3 3-3"/><path d="M6 20v-7"/>
+      </svg>Memos
+    </button>
+    <button class="mode-tab" data-mode="history">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+      </svg>Historial
+    </button>
+  </nav>
+
+  <!-- ── Translate bar ────────────────────────────────────────── -->
+  <div class="sub-bar" id="translateBar" style="display:none">
+    <span class="sub-label">Traducir a:</span>
+    <select id="targetLang" class="sub-select">
+      <option value="es">Español</option><option value="en">English</option>
+      <option value="fr">Français</option><option value="pt">Português</option>
+      <option value="de">Deutsch</option><option value="it">Italiano</option>
+      <option value="zh">中文</option><option value="ja">日本語</option>
+      <option value="ko">한국어</option><option value="ar">العربية</option>
+      <option value="ru">Русский</option>
+    </select>
+    <button class="sub-btn active" id="bilingualToggle" title="Mostrar original y traducción intercalados por párrafo">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
+      Vista bilingüe
+    </button>
+  </div>
+
+  <!-- ── Research bar ─────────────────────────────────────────── -->
+  <div class="research-bar" id="researchBar" style="display:none">
+    <div class="research-bar-top">
+      <span class="sub-label">Pestañas a analizar:</span>
+      <button class="btn-link" id="selectAllTabs">Seleccionar todas</button>
+    </div>
+    <div class="tabs-list" id="tabsList"></div>
+  </div>
+
+  <!-- ── Memos panel ──────────────────────────────────────────── -->
+  <div class="memos-panel" id="memosPanel" style="display:none">
+    <div class="memos-toolbar">
+      <button class="memo-new-btn" id="memoNewBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo
+      </button>
+      <input type="text" id="memoSearch" class="memo-search" placeholder="Buscar memos…">
+      <button class="memo-tool-btn" id="memoGraphBtn" title="Red de memos (grafo)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7 7.5l3.5 8M17 7.5l-3.5 8M7.5 6h9"/></svg>
+      </button>
+      <button class="memo-tool-btn" id="memoLinksBtn" title="✦ Sugerir vínculos con IA">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </button>
+      <button class="memo-tool-btn" id="memoExportBtn" title="Exportar memos">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+
+    <!-- Group-by selector -->
+    <div class="memos-groupbar">
+      <span class="sub-label">Agrupar por:</span>
+      <select id="memoGroupBy" class="sub-select">
+        <option value="none">Línea temporal</option>
+        <option value="date">Fecha</option>
+        <option value="project">Proyecto</option>
+        <option value="tag">Etiqueta</option>
+        <option value="source">Documento / URL</option>
+        <option value="type">Tipo</option>
+      </select>
+      <button class="memo-assist-btn" id="memoAssistBtn" title="Asistente guiado de memo diario">▣ Asistente diario</button>
+      <button class="memo-tool-btn memo-qs-btn" id="memoQsBtn" title="Editar preguntas del diario">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+
+    <!-- Diario reminder banner -->
+    <div class="diario-reminder" id="diarioReminder" style="display:none">
+      <span>▣ Aún no escribes tu memo de diario de hoy.</span>
+      <button class="btn-primary diario-now" id="diarioNowBtn">Escribir ahora</button>
+      <button class="btn-secondary" id="diarioDismissBtn">Hoy no</button>
+    </div>
+
+    <!-- Diario questions editor -->
+    <div class="memo-assist" id="memoQsEditor" style="display:none">
+      <div class="memo-assist-head">
+        <span class="sub-label">Preguntas del diario (una por línea)</span>
+        <button class="memo-card-btn" id="memoQsCancel" title="Cerrar">✕</button>
+      </div>
+      <textarea class="memo-content-input" id="memoQsText" rows="6"></textarea>
+      <div class="memo-editor-actions">
+        <button class="btn-secondary" id="memoQsReset">Restaurar originales</button>
+        <span style="flex:1"></span>
+        <button class="btn-primary" id="memoQsSave">Guardar preguntas</button>
+      </div>
+    </div>
+
+    <!-- Export menu (hidden) -->
+    <div class="memo-export-menu" id="memoExportMenu" style="display:none">
+      <button class="export-opt" data-fmt="obsidian">🟣 Vault para Obsidian (.zip con wikilinks)</button>
+      <button class="export-opt" data-fmt="md">📄 Markdown consolidado (.md)</button>
+      <button class="export-opt" data-fmt="csv">📊 CSV para análisis (.csv)</button>
+      <button class="export-opt" data-fmt="json">💾 JSON respaldo completo (.json)</button>
+      <button class="export-opt" data-fmt="zip-project">🗂 ZIP en carpetas por proyecto (.zip)</button>
+      <button class="export-opt" data-fmt="zip-date">🗓 ZIP en carpetas por fecha (.zip)</button>
+      <button class="export-opt" data-fmt="html-clip">📋 Copiar todo como HTML (para OneNote)</button>
+      <div class="export-sep"></div>
+      <button class="export-opt" id="memoImportBtn">📥 Importar respaldo JSON…</button>
+      <input type="file" id="memoImportInput" accept=".json,application/json" style="display:none">
+    </div>
+
+    <!-- Storage usage bar -->
+    <div class="storage-bar" id="storageBar"></div>
+
+    <!-- Editor (hidden by default) -->
+    <div class="memo-editor" id="memoEditor" style="display:none">
+      <!-- Type selector -->
+      <div class="memo-type-row" id="memoTypeRow">
+        <button class="memo-type-btn active" data-mtype="libre">● Libre</button>
+        <button class="memo-type-btn" data-mtype="pagina">◆ De página</button>
+        <button class="memo-type-btn" data-mtype="diario">▣ Diario</button>
+      </div>
+
+      <input type="text" id="memoTitleInput" class="memo-title-input" placeholder="Título del memo" maxlength="120">
+
+      <!-- Free / page content -->
+      <textarea id="memoContentInput" class="memo-content-input" placeholder="Escribe o pega aquí tu nota…"></textarea>
+
+      <!-- Diario questions (dynamic, shown only for type=diario) -->
+      <div class="memo-diario" id="memoDiario" style="display:none"></div>
+
+      <!-- Project + tags -->
+      <div class="memo-meta-row">
+        <input type="text" id="memoProjectInput" class="memo-title-input memo-project" placeholder="Proyecto (opcional)" maxlength="60" list="projectsDatalist">
+        <datalist id="projectsDatalist"></datalist>
+      </div>
+      <div class="memo-tags-box" id="memoTagsBox">
+        <div class="memo-tags-chips" id="memoTagsChips"></div>
+        <input type="text" id="memoTagInput" class="memo-tag-input" placeholder="Etiqueta + Enter" maxlength="40" list="tagsDatalist">
+        <datalist id="tagsDatalist"></datalist>
+      </div>
+
+      <div class="memo-anchor-box" id="memoAnchorBox" style="display:none">
+        <div class="memo-anchor-label">Cita ancla (evidencia textual):</div>
+        <blockquote class="memo-anchor-quote" id="memoAnchorQuote"></blockquote>
+        <button class="btn-link memo-anchor-remove" id="memoAnchorRemove">Quitar cita</button>
+      </div>
+
+      <div class="memo-editor-meta" id="memoEditorMeta"></div>
+
+      <div class="memo-related" id="memoRelated" style="display:none">
+        <div class="memo-related-label">Memos relacionados (por etiqueta):</div>
+        <div class="memo-related-list" id="memoRelatedList"></div>
+      </div>
+
+      <div class="memo-editor-actions">
+        <button class="btn-secondary memo-ai-suggest" id="memoAiSuggest" title="Envía el contenido a tu modelo de IA para sugerir título y etiquetas">✦ Sugerir título y etiquetas (IA)</button>
+        <span style="flex:1"></span>
+        <button class="btn-secondary" id="memoCancelBtn">Cancelar</button>
+        <button class="btn-primary" id="memoSaveBtn">Guardar memo</button>
+      </div>
+    </div>
+
+    <!-- Guided diary assistant (hidden) -->
+    <div class="memo-assist" id="memoAssist" style="display:none">
+      <div class="memo-assist-head">
+        <span class="memo-assist-progress" id="assistProgress">Pregunta 1 de 4</span>
+        <button class="memo-card-btn" id="assistClose" title="Cerrar">✕</button>
+      </div>
+      <div class="memo-assist-q" id="assistQuestion"></div>
+      <textarea class="memo-content-input" id="assistAnswer" rows="3" placeholder="Escribe tu respuesta… (puedes dejarla vacía y saltar)"></textarea>
+      <div class="memo-editor-actions">
+        <button class="btn-secondary" id="assistSkip">Saltar</button>
+        <button class="btn-primary" id="assistNext">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- AI link suggestions (hidden) -->
+    <div class="memo-links-box" id="memoLinksBox" style="display:none">
+      <div class="memo-assist-head">
+        <span class="sub-label">✦ Vínculos sugeridos por IA — aprueba o descarta</span>
+        <button class="memo-card-btn" id="linksClose" title="Cerrar">✕</button>
+      </div>
+      <div id="memoLinksList"></div>
+    </div>
+
+    <!-- Graph view (hidden) -->
+    <div class="memo-graph" id="memoGraph" style="display:none"></div>
+
+    <!-- List -->
+    <div class="memos-list" id="memosList"></div>
+
+    <!-- Empty state -->
+    <div class="memos-empty" id="memosEmpty" style="display:none">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="1.6">
+        <path d="M14 3v4a1 1 0 001 1h4"/><path d="M5 12V5a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2H7a2 2 0 01-2-2v-2"/>
+        <path d="M9 13h2M9 17h2"/>
+      </svg>
+      <p>Sin memos guardados.</p>
+      <p class="memos-empty-sub">Guarda fragmentos de páginas, respuestas de la IA o notas propias para consultarlas después.</p>
+    </div>
+  </div>
+
+  <!-- ── History panel ────────────────────────────────────────── -->
+  <div class="memos-panel" id="historyPanel" style="display:none">
+    <div class="memos-toolbar">
+      <span class="sub-label" style="padding:6px 4px;">Conversaciones guardadas</span>
+      <input type="text" id="historySearch" class="memo-search" placeholder="Buscar en historial…">
+    </div>
+
+    <div class="memos-list" id="historyList"></div>
+
+    <div class="memos-empty" id="historyEmpty" style="display:none">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="1.6">
+        <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+      </svg>
+      <p>Sin conversaciones guardadas.</p>
+      <p class="memos-empty-sub">Cuando inicies "Nueva conversación" desde el chat, la conversación actual se guardará aquí automáticamente.</p>
+    </div>
+  </div>
+
+  <!-- ── Messages area ────────────────────────────────────────── -->
+  <div class="messages-area" id="messagesArea">
+    <div class="welcome" id="welcomeScreen">
+      <img src="../icons/icon128.png" class="welcome-icon-img" alt="Picona">
+      <h2 class="welcome-title">Picona</h2>
+      <p class="welcome-desc" id="welcomeDesc">Conecta tus modelos de IA favoritos y úsalos directamente en tu navegador.</p>
+      <div class="welcome-btns" id="welcomeBtns">
+        <div class="welcome-steps" id="welcomeSteps">
+          <div class="w-step"><span class="w-step-n">1</span> Consigue una API key de OpenAI, Anthropic, Gemini, Groq (gratis) u otro proveedor.</div>
+          <div class="w-step"><span class="w-step-n">2</span> Conéctala aquí abajo — se guarda solo en tu navegador.</div>
+          <div class="w-step"><span class="w-step-n">3</span> Chatea, resume, traduce, analiza videos de YouTube y captura memos con fuente y etiquetas.</div>
+        </div>
+        <button class="welcome-primary" id="setupBtn">Conectar mi primer modelo</button>
+      </div>
+      <div class="quick-chips" id="quickChips" style="display:none">
+        <button class="chip" id="qSummarize">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="10" x2="3" y2="10"/><line x1="14" y1="14" x2="3" y2="14"/></svg>
+          Resumir esta página
+        </button>
+        <button class="chip" id="qResearch">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Investigar pestañas
+        </button>
+        <button class="chip" id="qTranslate">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
+          Traducir página
+        </button>
+      </div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="typing" id="typingIndicator" style="display:none">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- ── Input area ────────────────────────────────────────────── -->
+  <div class="input-area" id="inputArea">
+    <div class="input-wrapper">
+      <textarea id="userInput" class="user-input" placeholder="Escribe un mensaje…" rows="1" maxlength="8000"></textarea>
+      <button class="send-btn" id="sendBtn" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="action-chips-bar" id="actionBar"></div>
+    <div class="action-chips-bar yt-bar" id="ytChips" style="display:none"></div>
+  </div>
+
+  <!-- ── Model dropdown ───────────────────────────────────────── -->
+  <div class="dropdown-overlay" id="dropdownOverlay" style="display:none"></div>
+  <div class="model-dropdown" id="modelDropdown" style="display:none">
+    <div class="dropdown-inner" id="dropdownInner"></div>
+    <div class="dropdown-footer">
+      <button class="dropdown-manage" id="manageModels">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Gestionar modelos
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Settings panel ───────────────────────────────────────── -->
+  <div class="settings-panel" id="settingsPanel" style="display:none">
+    <div class="settings-header">
+      <button class="icon-btn" id="closeSettings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
+      <h2 class="settings-title">Configuración</h2>
+      <div style="width:32px"></div>
+    </div>
+
+    <div class="settings-body" id="settingsBody">
+
+      <!-- Modelos conectados -->
+      <section class="s-section">
+        <div class="s-section-title">Modelos conectados</div>
+        <div id="providersList" class="providers-list"></div>
+        <button class="btn-add-provider" id="addProviderBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Agregar modelo
+        </button>
+      </section>
+
+      <!-- Formulario agregar/editar -->
+      <section class="s-section add-form" id="addProviderForm" style="display:none">
+        <div class="s-section-title" id="formTitle">Nuevo modelo</div>
+
+        <!-- Toggle tipo de conexión -->
+        <div class="conn-toggle" id="connToggle">
+          <button class="conn-btn active" data-conn="api" id="connBtnApi">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2M12 12v4M10 14h4"/>
+            </svg>
+            API Key
+          </button>
+          <!-- Suscripción web desactivada temporalmente -->
+          <!--
+          <button class="conn-btn" data-conn="subscription" id="connBtnSub">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
+            </svg>
+            Suscripción web
+          </button>
+          -->
+        </div>
+
+        <!-- ── Campos API ── -->
+        <div id="apiFields">
+          <div class="form-row">
+            <label class="form-label">Proveedor</label>
+            <select id="providerType" class="form-select">
+              <option value="">Selecciona…</option>
+              <option value="openai">OpenAI (ChatGPT API)</option>
+              <option value="anthropic">Anthropic (Claude API)</option>
+              <option value="gemini">Google Gemini API</option>
+              <option value="mistral">Mistral AI</option>
+              <option value="groq">Groq (gratuito)</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="ollama">Ollama (local)</option>
+              <option value="custom">API personalizada</option>
+            </select>
+          </div>
+          <div class="form-row" id="apiKeyRow">
+            <label class="form-label">API Key</label>
+            <div class="input-with-action">
+              <input type="password" id="apiKeyInput" class="form-input" placeholder="Pega tu clave aquí">
+              <button class="toggle-vis" id="toggleApiKey" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <a class="form-hint-link" id="keyHintLink" href="#" target="_blank">¿Dónde obtengo mi API key? ↗</a>
+          </div>
+          <div class="form-row" id="baseUrlRow" style="display:none">
+            <label class="form-label">URL Base</label>
+            <input type="text" id="baseUrlInput" class="form-input" placeholder="http://localhost:11434">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Modelo</label>
+            <select id="modelSelect" class="form-select">
+              <option value="">Selecciona proveedor primero</option>
+            </select>
+            <input type="text" id="customModelInput" class="form-input" placeholder="Nombre del modelo" style="display:none; margin-top:6px">
+          </div>
+        </div>
+
+        <!-- ── Campos Suscripción ── -->
+
+        <!-- Común a ambos tipos -->
+        <div class="form-row">
+          <label class="form-label">Etiqueta (opcional)</label>
+          <input type="text" id="nicknameInput" class="form-input" placeholder="Ej: Mi Claude, GPT trabajo…">
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" id="cancelFormBtn">Cancelar</button>
+          <button class="btn-primary" id="saveProviderBtn">Guardar</button>
+        </div>
+      </section>
+
+      <!-- Acerca de -->
+      <section class="s-section s-about">
+        <div class="s-section-title">Acerca de Picona</div>
+        <p class="about-text">Las claves de API se guardan localmente en tu navegador y nunca se comparten con terceros.</p>
+        <p class="about-version">Picona v1.1</p>
+      </section>
+
+    </div>
+  </div><!-- /settings-panel -->
+
+</div><!-- /app -->
+<script src="app.js"></script>
+</body>
+</html>
