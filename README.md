@@ -1,10 +1,25 @@
-# Picona — Asistente de IA para Chrome
 
-Extensión de Chrome (Manifest V3) tipo Sider AI: panel lateral con chat,
-resumen, traducción, investigación multi-pestaña, memos y barra flotante
-de selección. Soporta modelos por API (OpenAI, Anthropic, Gemini, Mistral,
-Groq, OpenRouter, Ollama, custom) y por sesión de suscripción web
-(ChatGPT, Claude, Gemini, Perplexity, Copilot, Le Chat, Grok, HuggingChat).
+# Picona Extension
+
+Picona es una extensión de Chrome para trabajar y anotar la información que navegas (páginas, videos, podcasts, etc). 
+Permite conectar servicios de IA mediante API, resumir páginas, traducir, etc y registrar ideas en memos y construir una base de conocimiento exportable.
+
+## Funciones principales
+
+- Configuración API.
+- Resumen de páginas web.
+- Traducción y transcripción.
+- Exportación de páginas como PDF limpio
+- Investigación profunda por pestañas
+- Registro de memos cualitativios (libres; de página, diario)
+- Organización de ideas en red.
+- Exportación para trabajo posterior en otros entornos (Obsidian; OneNote; MaxQDA, etc.)
+
+## Estado del proyecto
+
+Versión beta
+
+
 
 ## Estructura
 
