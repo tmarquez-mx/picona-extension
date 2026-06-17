@@ -1,5 +1,5 @@
 
-# Picona Extension
+# Picona extensión de Chrome
 
 Picona es una extensión de Chrome para trabajar y anotar la información que navegas (páginas, videos, podcasts, etc). 
 Permite conectar servicios de IA mediante API, resumir páginas, traducir, etc y registrar ideas en memos y construir una base de conocimiento exportable.
