@@ -9,6 +9,7 @@
 *Extensión de navegador para investigación asistida por IA, con un sistema de notas de procedencia inspirado en el análisis cualitativo.*
 
 Prueba de concepto · Manifest V3 · Versión 2.7.2
+[**▸ Instalar desde Chrome Web Store**](https://chromewebstore.google.com/search/picona?hl=es)
 
 </div>
 
