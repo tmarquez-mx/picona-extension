@@ -10,7 +10,7 @@
 
 · Versión 2.7.2 ·
 [**▸ Instalar desde Chrome Web Store**](https://chromewebstore.google.com/search/picona?hl=es) ·
-[**▸Guía de usuario**] (https://github.com/tmarquez-mx/picona-extension/blob/main/Guia_de_usuario_Picona_2.6.pdf)
+[**▸Guía de usuario**](https://github.com/tmarquez-mx/picona-extension/blob/main/Guia_de_usuario_Picona_2.6.pdf)
 
 </div>
 
