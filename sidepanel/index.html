@@ -22,6 +22,13 @@
         <path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
       </svg>
     </button>
+    <button class="icon-btn" id="helpBtn" title="Manual de usuario">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </button>
     <button class="icon-btn" id="settingsBtn" title="Configuración">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
         <circle cx="12" cy="12" r="3"/>
@@ -31,7 +38,7 @@
   </header>
 
   <!-- ── Mode tabs ───────────────────────────────────────────── -->
-  <nav class="mode-tabs">
+  <nav class="mode-tabs" aria-label="Secciones de Picona">
     <button class="mode-tab active" data-mode="chat">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -94,48 +101,47 @@
 
   <!-- ── Memos panel ──────────────────────────────────────────── -->
   <div class="memos-panel" id="memosPanel" style="display:none">
+    <!-- Nivel 1: acción principal + búsqueda + menú "Más" -->
     <div class="memos-toolbar">
-      <button class="memo-new-btn" id="memoNewBtn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nuevo
-      </button>
-      <input type="text" id="memoSearch" class="memo-search" placeholder="Buscar memos…">
-      <button class="memo-tool-btn" id="memoGraphBtn" title="Red de memos (grafo)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7 7.5l3.5 8M17 7.5l-3.5 8M7.5 6h9"/></svg>
-      </button>
-      <button class="memo-tool-btn" id="memoLinksBtn" title="✦ Sugerir vínculos con IA">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-      </button>
-      <button class="memo-tool-btn" id="memoExportBtn" title="Exportar memos">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </button>
-    </div>
-
-    <!-- Group-by selector -->
-    <div class="memos-groupbar">
-      <span class="sub-label">Agrupar por:</span>
-      <select id="memoGroupBy" class="sub-select">
-        <option value="none">Línea temporal</option>
-        <option value="date">Fecha</option>
-        <option value="project">Proyecto</option>
-        <option value="tag">Etiqueta</option>
-        <option value="source">Documento / URL</option>
-        <option value="type">Tipo</option>
-      </select>
-      <button class="memo-assist-btn" id="memoAssistBtn" title="Asistente guiado de memo diario">▣ Asistente diario</button>
-      <button class="memo-tool-btn memo-qs-btn" id="memoQsBtn" title="Editar preguntas del diario">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <div class="memo-new-group">
+        <button class="memo-new-btn" id="memoNewBtn" title="Nuevo memo libre">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo memo
+        </button>
+        <button class="memo-new-caret" id="memoNewMenuBtn" title="Elegir tipo de memo" aria-haspopup="menu" aria-expanded="false">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+      <input type="text" id="memoSearch" class="memo-search" aria-label="Buscar memos" placeholder="Buscar memos…">
+      <button class="memo-tool-btn" id="memoExportBtn" title="Más: exportar, respaldar, vínculos con IA" aria-haspopup="menu" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
     </div>
 
-    <!-- Diario reminder banner -->
+    <!-- Menú de tipos de memo -->
+    <div class="memo-menu memo-new-menu" id="memoNewMenu" role="menu" style="display:none">
+      <button class="menu-opt" role="menuitem" data-new="libre"><span class="menu-ic">●</span><span><b>Memo libre</b><small>Una idea, nota o interpretación propia</small></span></button>
+      <button class="menu-opt" role="menuitem" data-new="pagina"><span class="menu-ic">◆</span><span><b>Memo de página</b><small>Guarda la fuente y la cita de la página activa</small></span></button>
+      <button class="menu-opt" role="menuitem" id="memoAssistBtn"><span class="menu-ic">▣</span><span><b>Diario guiado</b><small>Responde las preguntas del día, una por una</small></span></button>
+    </div>
+
+    <!-- Nivel 2: cómo ver los memos -->
+    <div class="memos-subbar">
+      <div class="seg" role="tablist" aria-label="Vista de memos">
+        <button class="seg-btn active" id="memoViewList" role="tab" aria-selected="true">Lista</button>
+        <button class="seg-btn" id="memoGraphBtn" role="tab" aria-selected="false" title="Red de memos conectados por etiquetas">Red</button>
+      </div>
+      <span class="memos-count" id="memosCount"></span>
+    </div>
+
+    <!-- Recordatorio de diario (discreto) -->
     <div class="diario-reminder" id="diarioReminder" style="display:none">
-      <span>▣ Aún no escribes tu memo de diario de hoy.</span>
-      <button class="btn-primary diario-now" id="diarioNowBtn">Escribir ahora</button>
-      <button class="btn-secondary" id="diarioDismissBtn">Hoy no</button>
+      <span>▣ Aún no escribes tu diario de hoy.</span>
+      <button class="btn-link diario-now" id="diarioNowBtn">Escribir ahora</button>
+      <button class="btn-link diario-dismiss" id="diarioDismissBtn">Hoy no</button>
     </div>
 
-    <!-- Diario questions editor -->
+    <!-- Editor de preguntas del diario -->
     <div class="memo-assist" id="memoQsEditor" style="display:none">
       <div class="memo-assist-head">
         <span class="sub-label">Preguntas del diario (una por línea)</span>
@@ -149,22 +155,27 @@
       </div>
     </div>
 
-    <!-- Export menu (hidden) -->
-    <div class="memo-export-menu" id="memoExportMenu" style="display:none">
-      <button class="export-opt" data-fmt="obsidian">🟣 Vault para Obsidian (.zip con wikilinks)</button>
-      <button class="export-opt" data-fmt="md">📄 Markdown consolidado (.md)</button>
-      <button class="export-opt" data-fmt="csv">📊 CSV para análisis (.csv)</button>
-      <button class="export-opt" data-fmt="json">💾 JSON respaldo completo (.json)</button>
-      <button class="export-opt" data-fmt="zip-project">🗂 ZIP en carpetas por proyecto (.zip)</button>
-      <button class="export-opt" data-fmt="zip-date">🗓 ZIP en carpetas por fecha (.zip)</button>
-      <button class="export-opt" data-fmt="html-clip">📋 Copiar todo como HTML (para OneNote)</button>
-      <div class="export-sep"></div>
-      <button class="export-opt" id="memoImportBtn">📥 Importar respaldo JSON…</button>
+    <!-- Menú "Más" -->
+    <div class="memo-menu memo-export-menu" id="memoExportMenu" role="menu" style="display:none">
+      <div class="menu-label">Dónde se guardan tus memos</div>
+      <label class="menu-opt menu-check"><input type="checkbox" id="vaultAutosave" checked><span><b>Guardar cada memo como nota .md</b><small>Al guardar, se escribe en Descargas/Picona-conversaciones/Memos/&lt;proyecto&gt;/</small></span></label>
+      <div class="menu-label">Guardar en tu bóveda de Obsidian</div>
+      <button class="menu-opt export-opt" role="menuitem" data-fmt="obsidian"><span class="menu-ic">🟣</span><span><b>Reescribir todos los memos en la bóveda</b><small>Útil tras importar un respaldo o activar la opción de arriba</small></span></button>
+      <button class="menu-opt export-opt" role="menuitem" data-fmt="json"><span class="menu-ic">💾</span><span><b>Respaldo completo (.json)</b><small>Para recuperar tus memos si reinstalas Picona</small></span></button>
+      <button class="menu-opt" role="menuitem" id="memoImportBtn"><span class="menu-ic">📥</span><span><b>Recuperar desde un respaldo…</b><small>Importa un archivo .json</small></span></button>
       <input type="file" id="memoImportInput" accept=".json,application/json" style="display:none">
+      <div class="menu-label">Con IA ✦</div>
+      <button class="menu-opt" role="menuitem" id="memoLinksBtn"><span class="menu-ic">🔗</span><span><b>Sugerir vínculos entre memos</b><small>Tú apruebas cada vínculo</small></span></button>
+      <div class="menu-label">Otros formatos</div>
+      <button class="menu-opt export-opt compact" role="menuitem" data-fmt="md">📄 Markdown en un solo archivo</button>
+      <button class="menu-opt export-opt compact" role="menuitem" data-fmt="csv">📊 CSV para análisis</button>
+      <button class="menu-opt export-opt compact" role="menuitem" data-fmt="zip-project">🗂 ZIP por proyecto</button>
+      <button class="menu-opt export-opt compact" role="menuitem" data-fmt="zip-date">🗓 ZIP por fecha</button>
+      <button class="menu-opt export-opt compact" role="menuitem" data-fmt="html-clip">📋 Copiar todo para OneNote</button>
+      <div class="menu-label">Diario</div>
+      <button class="menu-opt compact" role="menuitem" id="memoQsBtn">✎ Editar preguntas del diario</button>
     </div>
 
-    <!-- Storage usage bar -->
-    <div class="storage-bar" id="storageBar"></div>
 
     <!-- Editor (hidden by default) -->
     <div class="memo-editor" id="memoEditor" style="display:none">
@@ -253,13 +264,16 @@
       <p>Sin memos guardados.</p>
       <p class="memos-empty-sub">Guarda fragmentos de páginas, respuestas de la IA o notas propias para consultarlas después.</p>
     </div>
+
+    <!-- Pie: almacenamiento y respaldo -->
+    <div class="storage-bar" id="storageBar"></div>
   </div>
 
   <!-- ── History panel ────────────────────────────────────────── -->
   <div class="memos-panel" id="historyPanel" style="display:none">
     <div class="memos-toolbar">
       <span class="sub-label" style="padding:6px 4px;">Conversaciones guardadas</span>
-      <input type="text" id="historySearch" class="memo-search" placeholder="Buscar en historial…">
+      <input type="text" id="historySearch" class="memo-search" aria-label="Buscar en el historial" placeholder="Buscar en historial…">
     </div>
 
     <div class="memos-list" id="historyList"></div>
@@ -281,9 +295,9 @@
       <p class="welcome-desc" id="welcomeDesc">Conecta tus modelos de IA favoritos y úsalos directamente en tu navegador.</p>
       <div class="welcome-btns" id="welcomeBtns">
         <div class="welcome-steps" id="welcomeSteps">
-          <div class="w-step"><span class="w-step-n">1</span> Consigue una API key de OpenAI, Anthropic, Gemini, Groq (gratis) u otro proveedor.</div>
+          <div class="w-step"><span class="w-step-n">1</span> Consigue una API key de tu proveedor de IA. Groq y Mistral ofrecen opciones gratuitas.</div>
           <div class="w-step"><span class="w-step-n">2</span> Conéctala aquí abajo — se guarda solo en tu navegador.</div>
-          <div class="w-step"><span class="w-step-n">3</span> Chatea, resume, traduce, analiza videos de YouTube y captura memos con fuente y etiquetas.</div>
+          <div class="w-step"><span class="w-step-n">3</span> Chatea, resume, traduce, escucha la lectura en voz alta y captura memos con fuente y etiquetas.</div>
         </div>
         <button class="welcome-primary" id="setupBtn">Conectar mi primer modelo</button>
       </div>
@@ -311,15 +325,14 @@
   <!-- ── Input area ────────────────────────────────────────────── -->
   <div class="input-area" id="inputArea">
     <div class="input-wrapper">
-      <textarea id="userInput" class="user-input" placeholder="Escribe un mensaje…" rows="1" maxlength="8000"></textarea>
-      <button class="send-btn" id="sendBtn" disabled>
+      <textarea id="userInput" class="user-input" aria-label="Mensaje para la IA" placeholder="Escribe un mensaje…" rows="1" maxlength="8000"></textarea>
+      <button class="send-btn" id="sendBtn" title="Enviar" disabled>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
         </svg>
       </button>
     </div>
     <div class="action-chips-bar" id="actionBar"></div>
-    <div class="action-chips-bar yt-bar" id="ytChips" style="display:none"></div>
   </div>
 
   <!-- ── Model dropdown ───────────────────────────────────────── -->
@@ -340,7 +353,7 @@
   <!-- ── Settings panel ───────────────────────────────────────── -->
   <div class="settings-panel" id="settingsPanel" style="display:none">
     <div class="settings-header">
-      <button class="icon-btn" id="closeSettings">
+      <button class="icon-btn" id="closeSettings" title="Volver">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
         </svg>
@@ -367,26 +380,6 @@
       <section class="s-section add-form" id="addProviderForm" style="display:none">
         <div class="s-section-title" id="formTitle">Nuevo modelo</div>
 
-        <!-- Toggle tipo de conexión -->
-        <div class="conn-toggle" id="connToggle">
-          <button class="conn-btn active" data-conn="api" id="connBtnApi">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2M12 12v4M10 14h4"/>
-            </svg>
-            API Key
-          </button>
-          <!-- Suscripción web desactivada temporalmente -->
-          <!--
-          <button class="conn-btn" data-conn="subscription" id="connBtnSub">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-              <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
-            </svg>
-            Suscripción web
-          </button>
-          -->
-        </div>
-
         <!-- ── Campos API ── -->
         <div id="apiFields">
           <div class="form-row">
@@ -396,8 +389,8 @@
               <option value="openai">OpenAI (ChatGPT API)</option>
               <option value="anthropic">Anthropic (Claude API)</option>
               <option value="gemini">Google Gemini API</option>
-              <option value="mistral">Mistral AI</option>
-              <option value="groq">Groq (gratuito)</option>
+              <option value="mistral">Mistral AI (plan gratuito)</option>
+              <option value="groq">Groq (nivel gratuito)</option>
               <option value="openrouter">OpenRouter</option>
               <option value="ollama">Ollama (local)</option>
               <option value="custom">API personalizada</option>
@@ -407,7 +400,7 @@
             <label class="form-label">API Key</label>
             <div class="input-with-action">
               <input type="password" id="apiKeyInput" class="form-input" placeholder="Pega tu clave aquí">
-              <button class="toggle-vis" id="toggleApiKey" type="button">
+              <button class="toggle-vis" id="toggleApiKey" type="button" title="Mostrar u ocultar la clave">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
@@ -425,12 +418,11 @@
               <option value="">Selecciona proveedor primero</option>
             </select>
             <input type="text" id="customModelInput" class="form-input" placeholder="Nombre del modelo" style="display:none; margin-top:6px">
+            <button type="button" class="btn-link form-fetch-models" id="fetchModelsBtn" style="display:none">↻ Cargar modelos disponibles con mi clave</button>
           </div>
         </div>
 
-        <!-- ── Campos Suscripción ── -->
 
-        <!-- Común a ambos tipos -->
         <div class="form-row">
           <label class="form-label">Etiqueta (opcional)</label>
           <input type="text" id="nicknameInput" class="form-input" placeholder="Ej: Mi Claude, GPT trabajo…">
@@ -446,13 +438,34 @@
       <section class="s-section s-about">
         <div class="s-section-title">Acerca de Picona</div>
         <p class="about-text">Las claves de API se guardan localmente en tu navegador y nunca se comparten con terceros.</p>
-        <p class="about-version">Picona v1.1</p>
+        <p class="about-version" id="aboutVersion">Picona</p>
       </section>
 
     </div>
   </div><!-- /settings-panel -->
 
 </div><!-- /app -->
+<!-- ── Manual de usuario interactivo ──────────────────────── -->
+<div class="manual-overlay" id="manualOverlay" style="display:none">
+  <div class="manual-sheet">
+    <div class="manual-head">
+      <span class="manual-title">Manual de usuario</span>
+      <button class="manual-close" id="manualClose" title="Cerrar">✕</button>
+    </div>
+    <div class="manual-subtitle">Recorrido guiado</div>
+    <div class="manual-dots" id="manualDots"></div>
+    <div class="manual-steps" id="manualSteps"></div>
+    <div class="manual-nav">
+      <button class="manual-btn" id="manualPrev" disabled>Anterior</button>
+      <button class="manual-btn primary" id="manualNext">Siguiente</button>
+    </div>
+    <button class="manual-pdf" id="manualPdf">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar manual completo (PDF)
+    </button>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

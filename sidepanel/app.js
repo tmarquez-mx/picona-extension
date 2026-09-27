@@ -1,4 +1,4 @@
-/* ─── Picona · sidepanel/app.js v1.1 ──────────────────────────── */
+/* ─── Picona · sidepanel/app.js ───────────────────────────────── */
 
 // ── Multimodal helpers (image support for vision-capable models) ──
 function stripDataUrl(dataUrl){
@@ -38,14 +38,20 @@ const API_TEMPLATES = {
   openai: {
     label:'OpenAI', icon:'⚡', keyRequired:true,
     apiUrl:'https://api.openai.com/v1/chat/completions',
-    models:['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-3.5-turbo'],
+    modelsUrl:'https://api.openai.com/v1/models',
+    models:['gpt-6-luna','gpt-6-sol','gpt-6-astra'],
+    modelLabels:{'gpt-6-luna':'GPT-6 Luna (eficiente)','gpt-6-sol':'GPT-6 Sol','gpt-6-astra':'GPT-6 Astra (el más capaz)'},
     keyHint:'https://platform.openai.com/api-keys', keyHintLabel:'platform.openai.com ↗',
     buildHeaders:c=>({'Content-Type':'application/json','Authorization':`Bearer ${c.apiKey}`}),
     buildBody:compatBuildBody,
+    parseChunk:d=>d.choices?.[0]?.delta?.content||'', type:'compat'
+  },
+  anthropic: {
     label:'Anthropic', icon:'🔮', keyRequired:true,
     apiUrl:'https://api.anthropic.com/v1/messages',
-    models:['claude-opus-4-5-20251101','claude-sonnet-4-5-20251022','claude-haiku-4-5-20251001'],
-    modelLabels:{'claude-opus-4-5-20251101':'Claude Opus 4.5','claude-sonnet-4-5-20251022':'Claude Sonnet 4.5','claude-haiku-4-5-20251001':'Claude Haiku 4.5'},
+    modelsUrl:'https://api.anthropic.com/v1/models',
+    models:['claude-sonnet-5','claude-opus-5-5','claude-haiku-4-5-20251001'],
+    modelLabels:{'claude-sonnet-5':'Claude Sonnet 5','claude-opus-5-5':'Claude Opus 5.5','claude-haiku-4-5-20251001':'Claude Haiku 4.5'},
     keyHint:'https://console.anthropic.com/settings/keys', keyHintLabel:'console.anthropic.com ↗',
     buildHeaders:c=>({'Content-Type':'application/json','x-api-key':c.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}),
     buildBody(m,mod,s){const sys=m.find(x=>x.role==='system'),chat=m.filter(x=>x.role!=='system');return{model:mod,max_tokens:4096,stream:s,...(sys&&{system:sys.content}),messages:chat.map(x=>({role:x.role,content:toAnthropicContent(x)}))};},
@@ -53,19 +59,22 @@ const API_TEMPLATES = {
   },
   gemini: {
     label:'Google Gemini', icon:'✨', keyRequired:true,
-    apiUrlTpl:'https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?key={key}&alt=sse',
-    models:['gemini-2.0-flash','gemini-1.5-pro','gemini-1.5-flash'],
-    keyHint:'https://aistudio.google.com/app/apikey', keyHintLabel:'aistudio.google.com ↗',
-    buildUrl:c=>API_TEMPLATES.gemini.apiUrlTpl.replace('{model}',c.model).replace('{key}',c.apiKey),
-    buildHeaders:()=>({'Content-Type':'application/json'}),
+    // La clave viaja en el encabezado x-goog-api-key, no en la URL (no queda en registros)
+    apiUrlTpl:'https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse',
+    modelsUrl:'https://generativelanguage.googleapis.com/v1beta/models',
+    models:['gemini-3.8-flash','gemini-3.5-flash','gemini-3.5-flash-lite'],
+    keyHint:'https://aistudio.google.com/app/apikey', keyHintLabel:'aistudio.google.com ↗ (con nivel gratuito)',
+    buildUrl:c=>API_TEMPLATES.gemini.apiUrlTpl.replace('{model}',encodeURIComponent(c.model)),
+    buildHeaders:c=>({'Content-Type':'application/json','x-goog-api-key':c.apiKey}),
     buildBody(m){const sys=m.find(x=>x.role==='system'),chat=m.filter(x=>x.role!=='system');return{contents:chat.map(x=>({role:x.role==='assistant'?'model':'user',parts:toGeminiParts(x)})),...(sys&&{system_instruction:{parts:[{text:sys.content}]}}),generationConfig:{maxOutputTokens:4096,temperature:0.7}};},
     parseChunk:d=>d.candidates?.[0]?.content?.parts?.[0]?.text||'', type:'gemini'
   },
   mistral: {
     label:'Mistral AI', icon:'🌊', keyRequired:true,
     apiUrl:'https://api.mistral.ai/v1/chat/completions',
-    models:['mistral-large-latest','mistral-medium-latest','open-mistral-7b'],
-    keyHint:'https://console.mistral.ai/api-keys/', keyHintLabel:'console.mistral.ai ↗',
+    modelsUrl:'https://api.mistral.ai/v1/models',
+    models:['mistral-medium-latest','mistral-large-latest','mistral-small-latest'],
+    keyHint:'https://console.mistral.ai/api-keys/', keyHintLabel:'console.mistral.ai ↗ (plan gratuito disponible)',
     buildHeaders:c=>({'Content-Type':'application/json','Authorization':`Bearer ${c.apiKey}`}),
     buildBody:compatBuildBody,
     parseChunk:d=>d.choices?.[0]?.delta?.content||'', type:'compat'
@@ -73,7 +82,8 @@ const API_TEMPLATES = {
   groq: {
     label:'Groq', icon:'⚡', keyRequired:true,
     apiUrl:'https://api.groq.com/openai/v1/chat/completions',
-    models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','mixtral-8x7b-32768','gemma2-9b-it'],
+    modelsUrl:'https://api.groq.com/openai/v1/models',
+    models:['llama-3.3-70b-versatile','openai/gpt-oss-120b','openai/gpt-oss-20b'],
     keyHint:'https://console.groq.com/keys', keyHintLabel:'console.groq.com ↗ (gratuito)',
     buildHeaders:c=>({'Content-Type':'application/json','Authorization':`Bearer ${c.apiKey}`}),
     buildBody:compatBuildBody,
@@ -82,7 +92,8 @@ const API_TEMPLATES = {
   openrouter: {
     label:'OpenRouter', icon:'🔀', keyRequired:true,
     apiUrl:'https://openrouter.ai/api/v1/chat/completions',
-    models:['openai/gpt-4o','anthropic/claude-3.5-sonnet','meta-llama/llama-3.1-70b-instruct','mistralai/mistral-large','google/gemini-flash-1.5'],
+    modelsUrl:'https://openrouter.ai/api/v1/models',
+    models:['openai/gpt-6-luna','anthropic/claude-opus-5.5-20260921','google/gemini-3.8-flash-20260902'],
     keyHint:'https://openrouter.ai/keys', keyHintLabel:'openrouter.ai ↗',
     buildHeaders:c=>({'Content-Type':'application/json','Authorization':`Bearer ${c.apiKey}`,'HTTP-Referer':'https://picona.app','X-Title':'Picona'}),
     buildBody:compatBuildBody,
@@ -105,9 +116,6 @@ const API_TEMPLATES = {
   }
 };
 
-// ── Subscription service templates ─────────────────────────────
-// (Suscripción web eliminada en v2.6 — solo conexión por API key)
-
 
 // ── App state ───────────────────────────────────────────────────
 const state = {
@@ -125,7 +133,6 @@ const state = {
   memos: [],
   editingMemoId: null,
   memoSearchQuery: '',
-  memoGroupBy: 'none',
   formMemoType: 'libre',
   formMemoTags: [],
   formMemoSource: null,
@@ -134,8 +141,6 @@ const state = {
   assistAnswers: {},
   graphVisible: false,
   diarioQs: null,
-  ytCache: null,        // {videoId,title,segments,...}
-  videoContext: false,  // chat con contexto del video activo
   pendingSource: null,  // fuente (url/title) a heredar por el próximo memo guardado
   bilingualView: true,
   history: [],
@@ -155,7 +160,7 @@ const el = {
   memoEditor:$('memoEditor'), memoTitleInput:$('memoTitleInput'), memoContentInput:$('memoContentInput'),
   memoEditorMeta:$('memoEditorMeta'), memoCancelBtn:$('memoCancelBtn'), memoSaveBtn:$('memoSaveBtn'),
   memosList:$('memosList'), memosEmpty:$('memosEmpty'),
-  memoGroupBy:$('memoGroupBy'), memoExportBtn:$('memoExportBtn'), memoExportMenu:$('memoExportMenu'),
+  memoExportBtn:$('memoExportBtn'), memoExportMenu:$('memoExportMenu'),
   storageBar:$('storageBar'),
   memoTypeRow:$('memoTypeRow'), memoDiario:$('memoDiario'),
   memoQsBtn:$('memoQsBtn'), memoQsEditor:$('memoQsEditor'), memoQsText:$('memoQsText'),
@@ -189,7 +194,9 @@ const el = {
   baseUrlRow:$('baseUrlRow'), baseUrlInput:$('baseUrlInput'),
   modelSelect:$('modelSelect'), customModelInput:$('customModelInput'),
   nicknameInput:$('nicknameInput'), cancelFormBtn:$('cancelFormBtn'), saveProviderBtn:$('saveProviderBtn'),
-  setupBtn:$('setupBtn'), qSummarize:$('qSummarize'), qResearch:$('qResearch'), qTranslate:$('qTranslate')
+  setupBtn:$('setupBtn'), qSummarize:$('qSummarize'), qResearch:$('qResearch'), qTranslate:$('qTranslate'),
+  fetchModelsBtn:$('fetchModelsBtn'), aboutVersion:$('aboutVersion'),
+  memoNewMenuBtn:$('memoNewMenuBtn'), memoNewMenu:$('memoNewMenu'), memoViewList:$('memoViewList'), memosCount:$('memosCount')
 };
 
 // ── Storage ─────────────────────────────────────────────────────
@@ -254,14 +261,22 @@ function allProjects(){
 }
 async function saveMemos() {
   await chrome.storage.local.set({ picona_memos: state.memos });
+  scheduleAutoBackup();
 }
 async function loadHistory() {
   const d = await chrome.storage.local.get(['picona_history']);
   state.history = d.picona_history || [];
 }
+const HISTORY_MAX=100;
 async function saveHistory() {
-  // Cap history to avoid unbounded storage growth
-  if(state.history.length>100) state.history=state.history.slice(0,100);
+  // Límite para no llenar el almacenamiento; avisar la primera vez que se descarta algo
+  if(state.history.length>HISTORY_MAX){
+    state.history=state.history.slice(0,HISTORY_MAX);
+    if(!state.historyCapWarned){
+      state.historyCapWarned=true;
+      showToast(`El historial conserva las ${HISTORY_MAX} conversaciones más recientes; las más antiguas se descartan. Guarda como memo lo que quieras conservar.`);
+    }
+  }
   await chrome.storage.local.set({ picona_history: state.history });
 }
 function getActive() { return state.providers.find(p => p.id === state.activeProviderId) || null; }
@@ -270,30 +285,62 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 // ── Markdown ─────────────────────────────────────────────────────
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Renderizador Markdown seguro: TODO el texto se escapa antes de darle formato,
+// de modo que el HTML que devuelva un modelo (o una página resumida) nunca se interpreta.
+function safeHref(u){
+  const raw=String(u||'').replace(/&amp;/g,'&').trim();
+  return /^https?:\/\//i.test(raw) ? esc(raw) : null;
+}
+function mdInline(t){
+  // t ya viene escapado
+  t=t.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t=t.replace(/(^|[^*\w])\*(?!\s)(.+?)\*(?!\w)/g,'$1<em>$2</em>');
+  t=t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,(m,label,url)=>{
+    const h=safeHref(url);
+    return h?`<a href="${h}" target="_blank" rel="noopener noreferrer">${label}</a>`:label;
+  });
+  return t;
+}
 function md(text){
   if(!text) return '';
-  let h = text;
-  h = h.replace(/```(\w*)\n([\s\S]*?)```/g,(_,l,c)=>`<pre><code class="${l?'lang-'+l:''}">${esc(c.trim())}</code></pre>`);
-  h = h.replace(/`([^`\n]+)`/g,(_,c)=>`<code>${esc(c)}</code>`);
-  h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
-  h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
-  h = h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
-  h = h.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
-  h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  h = h.replace(/\*(.+?)\*/g,'<em>$1</em>');
-  h = h.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
-  h = h.replace(/^---$/gm,'<hr>');
-  h = h.replace(/^\- (.+)$/gm,'<li>$1</li>');
-  h = h.replace(/(<li>[\s\S]*?<\/li>)/g,m=>`<ul>${m}</ul>`);
-  h = h.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
-  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
-  const lines=h.split('\n'); const out=[]; let inP=false;
-  for(const ln of lines){
-    if(/^<(h[123]|ul|ol|pre|blockquote|hr)/.test(ln)||ln.trim()===''){ if(inP){out.push('</p>');inP=false;} if(ln.trim())out.push(ln); }
-    else{ if(!inP){out.push('<p>');inP=true;} out.push(ln); }
+  const slots=[];
+  const keep=html=>`\u0000${slots.push(html)-1}\u0000`;
+  let src=String(text);
+  // 1) Bloques de código y código en línea → reservados (escapados, sin más formato)
+  src=src.replace(/```([\w+-]*)[^\n]*\n([\s\S]*?)```/g,(_,l,c)=>
+    '\n'+keep(`<pre><code class="${l?'lang-'+esc(l):''}">${esc(c.replace(/\n$/,''))}</code></pre>`)+'\n');
+  src=src.replace(/`([^`\n]+)`/g,(_,c)=>keep(`<code>${esc(c)}</code>`));
+  // 2) Escapar todo lo demás
+  const lines=esc(src).split('\n');
+  const out=[]; let para=[]; let list=null;
+  const flushP=()=>{ if(para.length){ out.push(`<p>${para.map(mdInline).join('<br>')}</p>`); para=[]; } };
+  const flushL=()=>{ if(list){ out.push(`<${list.tag}>${list.items.map(i=>`<li>${mdInline(i)}</li>`).join('')}</${list.tag}>`); list=null; } };
+  const flush=()=>{ flushP(); flushL(); };
+  const cells=l=>l.trim().replace(/^\||\|$/g,'').split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,'|'));
+  for(let i=0;i<lines.length;i++){
+    const ln=lines[i];
+    let m;
+    if(!ln.trim()){ flush(); continue; }
+    if(/^\u0000\d+\u0000$/.test(ln.trim())){ flush(); out.push(ln.trim()); continue; }
+    if((m=ln.match(/^(#{1,4})\s+(.+)$/))){ flush(); const n=Math.min(m[1].length,3); out.push(`<h${n}>${mdInline(m[2])}</h${n}>`); continue; }
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(ln)){ flush(); out.push('<hr>'); continue; }
+    if((m=ln.match(/^&gt;\s?(.*)$/))){ flush(); out.push(`<blockquote>${mdInline(m[1])}</blockquote>`); continue; }
+    // Tablas Markdown: fila | a | b | seguida de | --- | --- |
+    if(/^\s*\|.*\|\s*$/.test(ln) && /^\s*\|?\s*:?-{3,}/.test(lines[i+1]||'')){
+      flush();
+      const head=cells(ln); i++;
+      const rows=[];
+      while(i+1<lines.length && /^\s*\|.*\|\s*$/.test(lines[i+1])){ i++; rows.push(cells(lines[i])); }
+      out.push(`<div class="md-table-wrap"><table><thead><tr>${head.map(c=>`<th>${mdInline(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${mdInline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    if((m=ln.match(/^\s*[-*+]\s+(.+)$/))){ flushP(); if(!list||list.tag!=='ul'){ flushL(); list={tag:'ul',items:[]}; } list.items.push(m[1]); continue; }
+    if((m=ln.match(/^\s*\d+[.)]\s+(.+)$/))){ flushP(); if(!list||list.tag!=='ol'){ flushL(); list={tag:'ol',items:[]}; } list.items.push(m[1]); continue; }
+    flushL(); para.push(ln);
   }
-  if(inP)out.push('</p>');
-  return out.join('\n');
+  flush();
+  return out.join('\n').replace(/\u0000(\d+)\u0000/g,(_,n)=>slots[+n]);
 }
 
 // ── Messages ─────────────────────────────────────────────────────
@@ -407,6 +454,11 @@ function openMemoEditor(memo){
     el.memoEditorMeta.innerHTML = `Fuente: <a href="${esc(memo.sourceUrl)}" target="_blank">${esc(memo.sourceTitle||memo.sourceUrl)}</a>`;
   } else {
     el.memoEditorMeta.textContent = '';
+  }
+  if(memo?.vaultPath){
+    const f=document.createElement('div'); f.className='memo-editor-file';
+    f.textContent=`📁 Nota guardada en Descargas/${memo.vaultPath}`;
+    el.memoEditorMeta.appendChild(f);
   }
   renderRelatedMemos(memo);
   el.memoEditor.style.display='flex';
@@ -555,30 +607,26 @@ async function saveMemo(){
       updatedAt: Date.now()
     });
   }
+  const savedId=state.editingMemoId||state.memos[0].id;
   await saveMemos();
   closeMemoEditor();
   renderMemos();
   checkDiarioReminder();
+  syncMemoToVault(state.memos.find(m=>m.id===savedId));
 }
 
-function deleteMemo(id){
-  const card=el.memosList.querySelector(`[data-memo-id="${id}"]`);
-  if(!card) return;
-  if(card.querySelector('.delete-confirm')) return;
-  const conf=document.createElement('div'); conf.className='delete-confirm';
-  conf.innerHTML=`¿Eliminar memo?
-    <button class="confirm-yes" data-yes="${id}">Eliminar</button>
-    <button class="confirm-no" data-no="${id}">Cancelar</button>`;
-  card.appendChild(conf);
-  conf.querySelector('.confirm-yes').addEventListener('click',async (e)=>{
-    e.stopPropagation();
-    state.memos=state.memos.filter(m=>m.id!==id);
-    await saveMemos();
-    renderMemos();
-  });
-  conf.querySelector('.confirm-no').addEventListener('click',(e)=>{
-    e.stopPropagation();
-    conf.remove();
+async function deleteMemo(id){
+  const idx=state.memos.findIndex(m=>m.id===id);
+  if(idx<0) return;
+  const [removed]=state.memos.splice(idx,1);
+  await saveMemos();
+  renderMemos();
+  removeMemoFromVault(removed);
+  showUndoToast(`Memo #${removed.number} eliminado.`,async()=>{
+    state.memos.splice(Math.min(idx,state.memos.length),0,removed);
+    await saveMemos(); renderMemos();
+    showToast(`✓ Memo #${removed.number} restaurado.`);
+    syncMemoToVault(removed,true);
   });
 }
 
@@ -592,21 +640,8 @@ function dateKey(ts){
 }
 
 function groupMemos(list){
-  const g=state.memoGroupBy;
-  if(g==='none') return [['',list]];
-  const map=new Map();
-  const push=(k,m)=>{ if(!map.has(k))map.set(k,[]); map.get(k).push(m); };
-  list.forEach(m=>{
-    if(g==='date') push(dateKey(m.createdAt),m);
-    else if(g==='project') push(m.project||'(sin proyecto)',m);
-    else if(g==='type') push(`${MEMO_TYPE_MARK[m.type]} ${MEMO_TYPE_LABEL[m.type]||m.type}`,m);
-    else if(g==='source') push(m.sourceTitle||m.sourceUrl||'(sin fuente)',m);
-    else if(g==='tag'){
-      if(m.tags?.length) m.tags.forEach(t=>push('#'+t,m));
-      else push('(sin etiquetas)',m);
-    }
-  });
-  return [...map.entries()];
+  // La agrupación se eliminó: siempre línea temporal (la organización se hace en Obsidian al exportar)
+  return [['',list]];
 }
 
 function memoCardHTML(m){
@@ -634,6 +669,7 @@ function memoCardHTML(m){
         <span class="memo-card-date">${m.project?esc(m.project)+' · ':''}${fmtDate(m.createdAt)}</span>
         ${m.sourceUrl?`<a class="memo-card-source" href="${esc(m.sourceUrl)}" target="_blank" title="${esc(m.sourceUrl)}">${esc(m.sourceTitle||m.sourceUrl)}</a>`:''}
       </div>
+      ${m.vaultPath?`<button class="memo-card-file" data-action="show-file" data-id="${esc(m.id)}" title="Descargas/${esc(m.vaultPath)} · clic para mostrarlo en su carpeta">📁 ${esc(m.vaultPath.replace(/^Picona-conversaciones\//,""))}</button>`:''}
     </div>`;
 }
 
@@ -650,6 +686,7 @@ function renderMemos(){
 
   if(!list.length){
     el.memosList.innerHTML='';
+    el.memosCount.textContent=q?`0 de ${state.memos.length}`:'';
     el.memosEmpty.style.display='flex';
     if(q){
       el.memosEmpty.querySelector('p').textContent='Sin resultados.';
@@ -661,6 +698,7 @@ function renderMemos(){
     return;
   }
   el.memosEmpty.style.display='none';
+  el.memosCount.textContent=q?`${list.length} de ${state.memos.length}`:`${state.memos.length} memo${state.memos.length===1?'':'s'}`;
 
   const groups=groupMemos(list);
   el.memosList.innerHTML=groups.map(([label,items])=>
@@ -675,6 +713,7 @@ function renderMemos(){
       if(action==='edit') openMemoEditor(state.memos.find(m=>m.id===id));
       else if(action==='delete') deleteMemo(id);
       else if(action==='copy') copyMemoHTML(id);
+      else if(action==='show-file') showMemoFile(id);
     });
   });
   el.memosList.querySelectorAll('.memo-card').forEach(card=>{
@@ -692,10 +731,10 @@ function memoToMarkdown(m){
     `tipo: ${m.type}`,
     `fecha: ${new Date(m.createdAt).toISOString()}`,
     `fecha_legible: "${fmtDateLong(m.createdAt)}"`,
-    m.project?`proyecto: "${m.project}"`:null,
-    m.tags?.length?`etiquetas: [${m.tags.join(', ')}]`:null,
-    m.sourceUrl?`fuente: ${m.sourceUrl}`:null,
-    m.sourceTitle?`fuente_titulo: "${m.sourceTitle.replace(/"/g,"'")}"`:null,
+    m.project?`proyecto: ${yq(m.project)}`:null,
+    m.tags?.length?`etiquetas: [${m.tags.map(yq).join(', ')}]`:null,
+    m.sourceUrl?`fuente: ${yq(m.sourceUrl)}`:null,
+    m.sourceTitle?`fuente_titulo: ${yq(m.sourceTitle)}`:null,
     '---'
   ].filter(Boolean).join('\n');
   const anchorBlock=m.anchor?`\n> ${m.anchor.replace(/\n/g,'\n> ')}\n`:'';
@@ -714,15 +753,120 @@ function memoToHTML(m){
   </div><hr>`;
 }
 
-function downloadFile(name,content,mime){
-  const blob=new Blob([content],{type:mime});
+// Todas las exportaciones van a Descargas/Picona-conversaciones/ (la misma carpeta que puede abrirse
+// como bóveda de Obsidian). Los memos quedan en la subcarpeta Memos/.
+const VAULT_DIR='Picona-conversaciones';
+const MEMOS_DIR=`${VAULT_DIR}/Memos`;
+
+// Guarda un archivo en Descargas/<path> y ESPERA a que Chrome termine de escribirlo.
+// Devuelve {ok, filename} con la ruta real en disco (para decirle a la persona dónde quedó).
+function waitDownload(id,timeoutMs=20000){
+  return new Promise(resolve=>{
+    let done=false;
+    const end=r=>{ if(done) return; done=true; chrome.downloads.onChanged.removeListener(onCh); clearTimeout(t); resolve(r); };
+    const check=()=>chrome.downloads.search({id}).then(([it])=>{
+      if(!it) return end({ok:false,error:'no encontrada'});
+      if(it.state==='complete') end({ok:true,filename:it.filename});
+      else if(it.state==='interrupted') end({ok:false,error:it.error||'interrumpida'});
+    }).catch(()=>{});
+    const onCh=d=>{ if(d.id===id&&d.state) check(); };
+    chrome.downloads.onChanged.addListener(onCh);
+    const t=setTimeout(()=>end({ok:false,error:'tiempo agotado'}),timeoutMs);
+    check();
+  });
+}
+async function saveToDownloads(path,content,mime,conflictAction='uniquify'){
+  const blob=content instanceof Blob?content:new Blob([content],{type:mime});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=name;
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); },500);
+  try{
+    const id=await chrome.downloads.download({url,filename:path,saveAs:false,conflictAction});
+    const r=await waitDownload(id);
+    return r.ok?{ok:true,filename:r.filename,dlId:id}:{ok:false,error:r.error};
+  }catch(e){
+    return {ok:false,error:e.message};
+  }finally{
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+}
+// Ruta legible a partir de la ruta completa en disco: "Descargas/Picona-conversaciones/Memos/…"
+function prettyPath(full){
+  if(!full) return '';
+  const f=full.replace(/\\/g,'/');
+  const i=f.indexOf(VAULT_DIR);
+  return i>=0?'Descargas/'+f.slice(i):f;
+}
+async function downloadFile(name,content,mime){
+  const r=await saveToDownloads(`${MEMOS_DIR}/${name}`,content,mime);
+  if(r.ok) showToast(`✓ Guardado en ${prettyPath(r.filename)}`);
+  else showError(`No se pudo guardar ${name}: ${r.error}. Revisa en Chrome → Configuración → Descargas que no esté activado "Preguntar dónde guardar cada archivo".`);
+  return r;
 }
 
+// ── Memos como notas en la bóveda ─────────────────────────────────
+// Los memos viven en el almacenamiento de Chrome (para que Picona los muestre, busque y relacione)
+// y, además, cada vez que se guardan se escribe su nota .md en
+// Descargas/Picona-conversaciones/Memos/<proyecto>/NNN-titulo.md, lista para Obsidian.
+async function vaultAutosaveOn(){
+  const d=await chrome.storage.local.get('picona_vault_autosave');
+  return d.picona_vault_autosave!==false;   // activado por omisión
+}
+function memoVaultPath(m){
+  return `${MEMOS_DIR}/${m.project?slug(m.project):'general'}/${obsidianFilename(m)}.md`;
+}
+async function syncMemoToVault(m,quiet){
+  if(!m || !(await vaultAutosaveOn())) return;
+  const path=memoVaultPath(m);
+  // Si cambió el título o el proyecto, borrar la nota anterior para no dejar duplicados
+  if(m.vaultDlId && m.vaultPath && m.vaultPath!==path){
+    await chrome.downloads.removeFile(m.vaultDlId).catch(()=>{});
+    await chrome.downloads.erase({id:m.vaultDlId}).catch(()=>{});
+  }
+  const r=await saveToDownloads(path,memoToObsidian(m),'text/markdown','overwrite');
+  const live=state.memos.find(x=>x.id===m.id);
+  if(r.ok && live){
+    live.vaultPath=path; live.vaultDlId=r.dlId;
+    await chrome.storage.local.set({picona_memos:state.memos});
+    if(state.mode==='memos' && el.memoEditor.style.display==='none') renderMemos();
+    if(!quiet) showToast(`✓ Memo #${m.number} guardado en ${prettyPath(r.filename)}`,7000);
+  } else if(!r.ok){
+    showError(`El memo quedó guardado en Picona, pero no se pudo escribir su nota en Descargas: ${r.error}`);
+  }
+}
+async function showMemoFile(id){
+  const m=state.memos.find(x=>x.id===id);
+  if(!m?.vaultDlId){ showError('Este memo aún no tiene nota en Descargas. Edítalo y guárdalo, o usa "⋯ → Reescribir todos los memos".'); return; }
+  try{ chrome.downloads.show(m.vaultDlId); }
+  catch{ showError('No se encontró el archivo; puede haberse movido. Guarda el memo de nuevo para recrearlo.'); }
+}
+async function removeMemoFromVault(m){
+  if(!m?.vaultDlId) return;
+  await chrome.downloads.removeFile(m.vaultDlId).catch(()=>{});
+  await chrome.downloads.erase({id:m.vaultDlId}).catch(()=>{});
+}
+
+// ── Respaldo automático diario de los memos ───────────────────────
+// Una vez al día (si hubo cambios) se sobrescribe Descargas/Picona-conversaciones/Memos/_respaldo/picona-memos-respaldo.json.
+// Protege los memos si la extensión se desinstala o se carga desde otra carpeta.
+let autoBackupTimer=null;
+function scheduleAutoBackup(){
+  clearTimeout(autoBackupTimer);
+  autoBackupTimer=setTimeout(async()=>{
+    try{
+      if(!state.memos.length) return;
+      const today=new Date().toDateString();
+      const d=await chrome.storage.local.get(['picona_autobackup_day','picona_autobackup_off']);
+      if(d.picona_autobackup_off || d.picona_autobackup_day===today) return;
+      const list=[...state.memos].sort((a,b)=>(a.number||0)-(b.number||0));
+      const r=await saveToDownloads(`${MEMOS_DIR}/_respaldo/picona-memos-respaldo.json`,JSON.stringify(list,null,2),'application/json','overwrite');
+      if(r.ok){
+        await chrome.storage.local.set({picona_autobackup_day:today,picona_last_backup:Date.now()});
+        renderStorageBar();
+      }
+    }catch{}
+  },4000);
+}
+
+const yq=v=>JSON.stringify(String(v??''));   // cadena YAML válida y escapada
 function csvEscape(v){ return '"'+String(v??'').replace(/"/g,'""')+'"'; }
 
 // ── PDF en modo lectura de la página activa ──────────────────────
@@ -731,6 +875,24 @@ async function exportPagePDF(){
   const r=await chrome.runtime.sendMessage({type:'OPEN_READER_PDF'});
   if(!r || r.ok===false){ showError(r?.error||'No se pudo generar el PDF.'); return; }
   showToast('✓ Se abrió la versión de lectura. Pulsa «Guardar como PDF».');
+}
+
+// ── Capturar el diálogo con un LLM de la página y guardarlo como Markdown ──
+async function captureConversation(){
+  const tab=await chrome.runtime.sendMessage({type:'GET_CURRENT_TAB'}).catch(()=>null);
+  const t=tab?.tab;
+  if(!t || !t.id || /^chrome/.test(t.url||'')){ showError('Abre la página de una conversación con IA para guardarla.'); return; }
+  showToast('Capturando la conversación…');
+  const r=await chrome.runtime.sendMessage({type:'CAPTURE_CONVERSATION',tabId:t.id});
+  if(!r || r.ok===false){ showError(r?.error||'No se pudo capturar la conversación.'); return; }
+  const saved=await saveToDownloads(r.path, r.md, 'text/markdown');
+  if(!saved.ok){ showError('No se pudo guardar el archivo .md: '+saved.error); return; }
+  let imgTxt='';
+  if(r.images){
+    imgTxt = `, ${r.savedImages} de ${r.images} imagen${r.images===1?'':'es'}`;
+    if(r.savedImages<r.images) imgTxt+=' (las demás quedan enlazadas en línea)';
+  }
+  showToast(`✓ Guardado en ${prettyPath(saved.filename)} (${r.turns} mensajes${imgTxt})`);
 }
 
 // ── Almacenamiento y respaldos ───────────────────────────────────
@@ -771,22 +933,19 @@ async function renderStorageBar(){
   const d=await chrome.storage.local.get(['picona_last_backup']);
   const last=d.picona_last_backup||null;
   const ageDays = last ? Math.floor((Date.now()-last)/86400000) : null;
-  const staleBackup = !last || ageDays>=BACKUP_MAX_AGE_DAYS;
-
-  let warnMsg='';
-  if(near) warnMsg=`Estás usando el ${pct}% del espacio. Conviene exportar un respaldo JSON y borrar memos antiguos.`;
-  else if(staleBackup) warnMsg = last
-    ? `Tu último respaldo fue hace ${ageDays} días. Te recomendamos exportar un respaldo JSON.`
-    : `Aún no has hecho un respaldo. Te recomendamos exportar tus memos en JSON.`;
-
+  const stale = state.memos.length>0 && !(await vaultAutosaveOn()) && (!last || ageDays>=BACKUP_MAX_AGE_DAYS);
+  const lastTxt = !last ? 'sin respaldo aún'
+    : ageDays===0 ? 'respaldo de hoy' : `último respaldo hace ${ageDays} día${ageDays===1?'':'s'}`;
+  let warn='';
+  if(near) warn=`Usas el ${pct}% del espacio. Guarda un respaldo y borra memos antiguos.`;
+  else if(stale) warn='Tus memos solo viven en este navegador. Guarda un respaldo para no perderlos.';
   el2.innerHTML=`
     <div class="storage-row">
-      <span class="storage-label">Almacenamiento: ${fmtBytes(used)} de 10 MB (${pct}%)</span>
-      ${last?`<span class="storage-backup">Último respaldo: hace ${ageDays===0?'menos de un día':ageDays+' día'+(ageDays===1?'':'s')}</span>`:`<span class="storage-backup">Sin respaldos</span>`}
+      <span>${fmtBytes(used)} de 10 MB · ${lastTxt}</span>
+      <button class="btn-link storage-backup-link" id="storageBackupBtn">Respaldar ahora</button>
     </div>
-    <div class="storage-track"><div class="storage-fill ${near?'near':''}" style="width:${pct}%"></div></div>
-    ${warnMsg?`<div class="storage-warn ${near?'crit':''}">${warnMsg} <button class="storage-backup-btn" id="storageBackupBtn">Exportar respaldo ahora</button></div>`:''}
-  `;
+    ${near?`<div class="storage-track"><div class="storage-fill near" style="width:${pct}%"></div></div>`:''}
+    ${warn?`<div class="storage-warn ${near?'crit':''}">${warn}</div>`:''}`;
   $('storageBackupBtn')?.addEventListener('click',()=>exportMemos('json'));
 }
 
@@ -808,10 +967,10 @@ async function exportMemos(fmt){
     downloadFile(`picona-memos-${stamp}.csv`,'\ufeff'+head+'\n'+rows.join('\n'),'text/csv');
   }
   else if(fmt==='json'){
-    downloadFile(`picona-memos-${stamp}.json`,JSON.stringify(list,null,2),'application/json');
-    await registerBackup();
+    const r=await downloadFile(`picona-memos-${stamp}.json`,JSON.stringify(list,null,2),'application/json');
+    if(r.ok) await registerBackup();
   }
-  else if(fmt==='obsidian'){ exportObsidian(); }
+  else if(fmt==='obsidian'){ el.memoExportMenu.style.display='none'; await exportObsidian(); return; }
   else if(fmt==='zip-project'){ exportZipGrouped('project'); }
   else if(fmt==='zip-date'){ exportZipGrouped('date'); }
   else if(fmt==='html-clip'){
@@ -846,12 +1005,14 @@ async function copyMemoHTML(id){
 // ── LLM one-shot helper (non-streaming accumulate) ───────────────
 function llmOnce(prompt){
   return new Promise((resolve,reject)=>{
-    let full='';
-    state.abortCtrl=new AbortController();
+    let full='', settled=false;
+    const ctrl=new AbortController();
+    const done=(fn,v)=>{ if(!settled){ settled=true; fn(v); } };
     streamLLM([{role:'user',content:prompt}],
       c=>{full+=c;},
-      ()=>resolve(full),
-      err=>reject(new Error(err||'Error de IA')));
+      ()=>done(resolve,full),
+      err=>done(reject,new Error(err||'Error de IA')),
+      ctrl.signal);
   });
 }
 function extractJSON(text){
@@ -987,13 +1148,20 @@ async function importMemosJSON(file){
     const data=JSON.parse(text);
     if(!Array.isArray(data)) throw new Error('El archivo no contiene una lista de memos.');
     const existing=new Set(state.memos.map(m=>m.id));
-    let added=0, skipped=0;
+    const usedNums=new Set(state.memos.map(m=>m.number));
+    let added=0, skipped=0, renumbered=0;
     for(const m of data){
       if(!m||typeof m!=='object'||!m.id){ skipped++; continue; }
       if(existing.has(m.id)){ skipped++; continue; }
+      // Identificadores solo alfanuméricos (se insertan en atributos HTML)
+      const id=/^[\w-]{1,64}$/.test(String(m.id))?String(m.id):uid();
+      // Un número ya usado por otro memo se reasigna: la numeración nunca se repite
+      let num=(Number.isInteger(m.number)&&m.number>0&&!usedNums.has(m.number))?m.number:0;
+      if(!num && Number.isInteger(m.number)) renumbered++;
+      if(num) usedNums.add(num);
       state.memos.push({
-        id:m.id,
-        number:typeof m.number==='number'?m.number:0,
+        id,
+        number:num,
         type:['libre','pagina','diario'].includes(m.type)?m.type:(m.sourceUrl?'pagina':'libre'),
         title:String(m.title||'Sin título').slice(0,200),
         content:String(m.content||''),
@@ -1006,16 +1174,16 @@ async function importMemosJSON(file){
         createdAt:typeof m.createdAt==='number'?m.createdAt:Date.now(),
         updatedAt:typeof m.updatedAt==='number'?m.updatedAt:Date.now()
       });
-      existing.add(m.id); added++;
+      existing.add(id); added++;
     }
-    // Asignar números a los que llegaron sin número y subir el contador
-    for(const m of state.memos){ if(!m.number) m.number=await nextMemoNumber(); }
+    // Primero subir el contador al número más alto; después numerar los que quedaron sin número
     const maxNum=Math.max(0,...state.memos.map(m=>m.number||0));
     const c=await chrome.storage.local.get(['picona_memo_counter']);
     if((c.picona_memo_counter||0)<maxNum) await chrome.storage.local.set({picona_memo_counter:maxNum});
+    for(const m of state.memos){ if(!m.number) m.number=await nextMemoNumber(); }
     await saveMemos();
     renderMemos();
-    showToast(`✓ Importados ${added} memo${added===1?'':'s'}${skipped?` (${skipped} omitidos: duplicados o inválidos)`:''}.`);
+    showToast(`✓ Importados ${added} memo${added===1?'':'s'}${skipped?` (${skipped} omitidos: duplicados o inválidos)`:''}${renumbered?`; ${renumbered} con número nuevo para no repetir`:''}.`);
   }catch(e){
     showError('No se pudo importar: '+e.message);
   }finally{
@@ -1080,11 +1248,14 @@ ${corpus}`);
 }
 
 // ── Red de memos: grafo SVG (layout circular, local) ─────────────
-function toggleGraph(){
-  state.graphVisible=!state.graphVisible;
+function toggleGraph(force){
+  state.graphVisible=typeof force==='boolean'?force:!state.graphVisible;
   el.memoGraph.style.display=state.graphVisible?'block':'none';
   el.memosList.style.display=state.graphVisible?'none':'flex';
-  el.memoGraphBtn.classList.toggle('active-tool',state.graphVisible);
+  el.memoGraphBtn.classList.toggle('active',state.graphVisible);
+  el.memoViewList.classList.toggle('active',!state.graphVisible);
+  el.memoGraphBtn.setAttribute('aria-selected',String(state.graphVisible));
+  el.memoViewList.setAttribute('aria-selected',String(!state.graphVisible));
   if(state.graphVisible) renderGraph();
 }
 
@@ -1148,16 +1319,16 @@ function renderGraph(){
   const edgeSvg=edges.map(([i,j,sh])=>
     `<line x1="${nodes[i].x.toFixed(1)}" y1="${nodes[i].y.toFixed(1)}" x2="${nodes[j].x.toFixed(1)}" y2="${nodes[j].y.toFixed(1)}"
        stroke="#D2D2D7" stroke-width="${Math.min(1.2+sh.length*0.8,3.5)}" stroke-linecap="round">
-       <title>${sh.map(t=>'#'+t).join(' ')}</title></line>`).join('');
+       <title>${esc(sh.map(t=>'#'+t).join(' '))}</title></line>`).join('');
 
   const TYPE_NAME={libre:'Libre',pagina:'De página',diario:'Diario'};
   const nodeSvg=memos.map((m,i)=>
-    `<g class="graph-node" data-gid="${m.id}" transform="translate(${nodes[i].x.toFixed(1)},${nodes[i].y.toFixed(1)})">
+    `<g class="graph-node" data-gid="${esc(m.id)}" transform="translate(${nodes[i].x.toFixed(1)},${nodes[i].y.toFixed(1)})">
       <circle r="${r(i)}" fill="${PALETTE[i%PALETTE.length]}"/>
       ${r(i)>=14?`<text class="graph-num" text-anchor="middle" dy="3.5">#${m.number}</text>`:''}
-      <title>#${m.number} ${m.title}
-${TYPE_NAME[m.type]||m.type} · ${degree[i]} conexión${degree[i]===1?'':'es'}
-${(m.tags||[]).map(t=>'#'+t).join(' ')}</title>
+      <title>#${m.number} ${esc(m.title||'')}
+${esc(TYPE_NAME[m.type]||m.type)} · ${degree[i]} conexión${degree[i]===1?'':'es'}
+${esc((m.tags||[]).map(t=>'#'+t).join(' '))}</title>
     </g>`).join('');
 
   const isolated=degree.filter(d=>d===0).length;
@@ -1225,12 +1396,7 @@ function exportZipGrouped(by){
     return { name:`${folder}/${String(m.number).padStart(3,'0')}-${slug(m.title)}.md`, text:memoToMarkdown(m) };
   });
   const stamp=new Date().toISOString().slice(0,10);
-  const blob=makeZip(files);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`picona-memos-${by==='project'?'proyectos':'fechas'}-${stamp}.zip`;
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},500);
+  downloadFile(`picona-memos-${by==='project'?'proyectos':'fechas'}-${stamp}.zip`,makeZip(files));
 }
 
 
@@ -1246,10 +1412,10 @@ function memoToObsidian(m,byNumber){
     `tipo: ${m.type}`,
     `fecha: ${fecha.toISOString()}`,
     `fecha_legible: "${fmtDateLong(m.createdAt)}"`,
-    m.project?`proyecto: "${m.project}"`:null,
-    (m.tags&&m.tags.length)?'etiquetas:\n'+m.tags.map(t=>`  - ${t}`).join('\n'):null,
-    m.sourceUrl?`fuente: ${m.sourceUrl}`:null,
-    m.sourceTitle?`fuente_titulo: "${(m.sourceTitle||'').replace(/"/g,"'")}"`:null,
+    m.project?`proyecto: ${yq(m.project)}`:null,
+    (m.tags&&m.tags.length)?'etiquetas:\n'+m.tags.map(t=>`  - ${yq(t)}`).join('\n'):null,
+    m.sourceUrl?`fuente: ${yq(m.sourceUrl)}`:null,
+    m.sourceTitle?`fuente_titulo: ${yq(m.sourceTitle)}`:null,
     '---'
   ].filter(Boolean).join('\n');
 
@@ -1275,168 +1441,25 @@ function memoToObsidian(m,byNumber){
   return `${fm}\n\n# ${m.title||'Sin título'}\n\n${tagsInline?tagsInline+'\n':''}${anchorCallout}${fuente}\n${m.content||''}\n${relBlock}`;
 }
 
-function exportObsidian(){
+// Escribe cada memo como nota .md directamente en Descargas/Picona-conversaciones/Memos/<proyecto>/,
+// la misma bóveda donde se guardan los diálogos. Si ya existía, se sobrescribe (queda al día).
+async function exportObsidian(){
   const list=[...state.memos].sort((a,b)=>(a.number||0)-(b.number||0));
   if(!list.length){ showError('No hay memos para exportar.'); return; }
-  const files=list.map(m=>({
-    name:`${m.project?slug(m.project):'general'}/${obsidianFilename(m)}.md`,
-    text:memoToObsidian(m)
-  }));
-  // Nota de bienvenida del mini-vault
-  files.unshift({name:'_inicio.md',text:`# Memos Picona\n\nExportado: ${new Date().toLocaleString('es-MX')}\nMemos: ${list.length}\n\nAbre la vista de grafo de Obsidian para ver la red de memos (los wikilinks de "Relacionados" la generan automáticamente).\n`});
-  const stamp=new Date().toISOString().slice(0,10);
-  const blob=makeZip(files);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`picona-obsidian-${stamp}.zip`;
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},500);
-}
-
-
-// ── YouTube ───────────────────────────────────────────────────────
-function ytTime(ms){
-  const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60;
-  const h=Math.floor(m/60);
-  return h?`${h}:${String(m%60).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
-}
-async function activeYTTab(){
-  const r=await chrome.runtime.sendMessage({type:'GET_CURRENT_TAB'}).catch(()=>null);
-  const tab=r?.tab;
-  if(tab?.url && /youtube\.com\/watch\?/.test(tab.url)) return tab;
-  return null;
-}
-async function getYTTranscript(){
-  const tab=await activeYTTab();
-  if(!tab){ showError('Abre un video de YouTube en la pestaña activa.'); return null; }
-  const vid=new URL(tab.url).searchParams.get('v');
-  if(state.ytCache && state.ytCache.videoId===vid) return state.ytCache;
-  const res=await chrome.runtime.sendMessage({type:'GET_YT_TRANSCRIPT',tabId:tab.id});
-  if(!res?.ok){ showError(res?.error||'No se pudo obtener la transcripción.'); return null; }
-  state.ytCache=res;
-  state.ytCache.tabUrl=tab.url;
-  return res;
-}
-function ytTranscriptText(yt,maxChars=14000){
-  // Con marcas de tiempo cada ~30s para que la IA pueda citar momentos
-  let out=[], lastMark=-30000;
-  for(const seg of yt.segments){
-    if(seg.t-lastMark>=30000){ out.push(`\n[${ytTime(seg.t)}]`); lastMark=seg.t; }
-    out.push(seg.text);
+  showToast(`Guardando ${list.length} memo${list.length===1?'':'s'} en tu bóveda…`);
+  let ok=0, fail=0, sample='';
+  const idx=`# Memos Picona\n\nActualizado: ${new Date().toLocaleString('es-MX')}\nMemos: ${list.length}\n\n`+
+    list.map(m=>`- [[${obsidianFilename(m)}|#${m.number} ${m.title||'Sin título'}]]`).join('\n')+'\n';
+  const r0=await saveToDownloads(`${MEMOS_DIR}/_inicio.md`,idx,'text/markdown','overwrite');
+  if(r0.ok) sample=r0.filename;
+  for(const m of list){
+    const folder=m.project?slug(m.project):'general';
+    const r=await saveToDownloads(`${MEMOS_DIR}/${folder}/${obsidianFilename(m)}.md`,memoToObsidian(m),'text/markdown','overwrite');
+    r.ok?ok++:fail++;
   }
-  let text=out.join(' ').trim();
-  if(text.length>maxChars) text=text.slice(0,maxChars)+'\n[transcripción truncada]';
-  return text;
-}
-async function ytAction(kind){
-  const prov=getActive();
-  if(!prov){ showError('Configura un modelo primero.'); return; }
-  addMessage('system','🎬 Obteniendo transcripción del video…');
-  const yt=await getYTTranscript();
-  state.messages=state.messages.filter(m=>m.role!=='system');
-  el.messages.innerHTML=''; state.messages.forEach(m=>renderMsg(m));
-  if(!yt) return;
-
-  const header=`Video: "${yt.title}"${yt.author?' — '+yt.author:''} (duración ${ytTime((yt.lengthSeconds||0)*1000)}${yt.isAuto?', subtítulos automáticos':''})`;
-  const transcript=ytTranscriptText(yt);
-
-  const prompts={
-    summary:{
-      label:`🎬 Resumir video: "${yt.title.slice(0,60)}"`,
-      think:'Resumiendo el video…',
-      p:`${header}\n\nGenera un resumen claro y estructurado de los puntos principales del video a partir de su transcripción:\n\n${transcript}`
-    },
-    keys:{
-      label:`🔑 Ideas clave y momentos: "${yt.title.slice(0,60)}"`,
-      think:'Extrayendo ideas clave y momentos…',
-      p:`${header}\n\nExtrae las ideas clave del video y los momentos importantes. Para cada momento importante indica su marca de tiempo en formato [mm:ss] usando las marcas presentes en la transcripción:\n\n${transcript}`
-    },
-    outline:{
-      label:`🗂 Esquema de temas: "${yt.title.slice(0,60)}"`,
-      think:'Construyendo el esquema de temas…',
-      p:`${header}\n\nCrea un esquema jerárquico (temas y subtemas) de los temas tratados en el video, en orden de aparición, con marcas de tiempo [mm:ss] al inicio de cada tema principal:\n\n${transcript}`
-    }
-  };
-  const cfg=prompts[kind];
-  addMessage('user',cfg.label);
-  state.pendingSource={url: yt.tabUrl||`https://youtube.com/watch?v=${yt.videoId}`, title: yt.title};
-  await callWithMessages([{role:'user',content:cfg.p}],cfg.think);
-}
-
-async function ytShowTranscript(){
-  addMessage('system','🎬 Obteniendo transcripción…');
-  const yt=await getYTTranscript();
-  state.messages=state.messages.filter(m=>m.role!=='system');
-  el.messages.innerHTML=''; state.messages.forEach(m=>renderMsg(m));
-  if(!yt) return;
-  // Mensaje local (sin IA) con timestamps enlazados al video
-  const aid=uid();
-  const lines=[];
-  let lastMark=-30000, buf=[];
-  for(const seg of yt.segments){
-    if(seg.t-lastMark>=30000){
-      if(buf.length) lines.push(buf.join(' '));
-      const url=`${yt.tabUrl.split('&t=')[0]}&t=${Math.floor(seg.t/1000)}s`;
-      lines.push(`__TS__${ytTime(seg.t)}__${url}__`);
-      lastMark=seg.t; buf=[];
-    }
-    buf.push(seg.text);
-  }
-  if(buf.length) lines.push(buf.join(' '));
-  state.messages.push({id:aid,role:'assistant',content:`Transcripción de "${yt.title}"`,ts:Date.now()});
-  renderMsg({id:aid,role:'assistant',content:''});
-  const bubble=el.messages.querySelector(`[data-id="${aid}"] .msg-bubble`);
-  if(bubble){
-    bubble.innerHTML=`<div class="yt-transcript">
-      <div class="yt-transcript-title">📜 ${esc(yt.title)} <span class="yt-lang">${esc(yt.lang)}${yt.isAuto?' · auto':''}</span></div>
-      ${lines.map(l=>{
-        const m=l.match(/^__TS__(.+?)__(.+)__$/);
-        if(m) return `<a class="yt-ts" href="${esc(m[2])}" target="_blank">▶ ${esc(m[1])}</a>`;
-        return `<p>${esc(l)}</p>`;
-      }).join('')}
-    </div>`;
-  }
-  // Guardar texto plano en el historial
-  const m=state.messages.find(x=>x.id===aid);
-  if(m) m.content=`Transcripción de "${yt.title}":\n\n`+ytTranscriptText(yt,30000);
-  scrollBottom();
-}
-
-async function ytToggleChatContext(){
-  if(state.videoContext){
-    state.videoContext=false;
-    refreshYTChips();
-    showToast('Contexto de video desactivado.');
-    return;
-  }
-  const yt=await getYTTranscript();
-  if(!yt) return;
-  state.videoContext=true;
-  refreshYTChips();
-  showToast(`✓ Chat con contexto del video activado. Pregunta lo que quieras sobre "${yt.title.slice(0,50)}".`);
-  el.userInput.focus();
-}
-
-async function refreshYTChips(){
-  const bar=$('ytChips');
-  if(!bar) return;
-  const tab=await activeYTTab();
-  if(!tab || state.mode!=='chat'){ bar.style.display='none'; return; }
-  // Si cambió de video, limpiar caché y contexto
-  const vid=new URL(tab.url).searchParams.get('v');
-  if(state.ytCache && state.ytCache.videoId!==vid){ state.ytCache=null; state.videoContext=false; }
-  bar.style.display='flex';
-  bar.innerHTML=`
-    <button class="chip yt-chip" id="ytSummary">🎬 Resumir video</button>
-    <button class="chip yt-chip" id="ytKeys">🔑 Ideas clave y momentos</button>
-    <button class="chip yt-chip" id="ytOutline">🗂 Esquema de temas</button>
-    <button class="chip yt-chip" id="ytTrans">📜 Transcripción</button>
-    <button class="chip yt-chip ${state.videoContext?'yt-active':''}" id="ytChat">${state.videoContext?'💬 Contexto de video: ON':'💬 Preguntar sobre el video'}</button>`;
-  $('ytSummary')?.addEventListener('click',()=>ytAction('summary'));
-  $('ytKeys')?.addEventListener('click',()=>ytAction('keys'));
-  $('ytOutline')?.addEventListener('click',()=>ytAction('outline'));
-  $('ytTrans')?.addEventListener('click',ytShowTranscript);
-  $('ytChat')?.addEventListener('click',ytToggleChatContext);
+  if(ok) await registerBackup();
+  if(fail) showError(`Se guardaron ${ok} memos; ${fail} no se pudieron guardar.`);
+  else showToast(`✓ ${ok} memo${ok===1?'':'s'} en ${prettyPath(sample).replace(/\/_inicio\.md$/,'/')}`);
 }
 
 // Quick-save helper used by chat / selection / context menu
@@ -1457,6 +1480,7 @@ async function quickSaveMemo({title, content, sourceUrl, sourceTitle, type, tags
     updatedAt: Date.now()
   });
   await saveMemos();
+  syncMemoToVault(state.memos[0]);
 }
 
 // ── Conversation history ────────────────────────────────────────
@@ -1494,8 +1518,10 @@ async function saveCurrentConversation(){
     }
   }
 
+  const newId=uid();
+  state.currentHistoryId=newId;   // las siguientes respuestas actualizan esta misma entrada
   state.history.unshift({
-    id:uid(),
+    id:newId,
     title:conversationTitle(),
     mode:['chat','summarize','research','translate'].includes(state.mode)?state.mode:'chat',
     messages:JSON.parse(JSON.stringify(state.messages)),
@@ -1531,25 +1557,18 @@ function openHistoryItem(id){
   scrollBottom();
 }
 
-function deleteHistoryItem(id){
-  const card=el.historyList.querySelector(`[data-history-id="${id}"]`);
-  if(!card) return;
-  if(card.querySelector('.delete-confirm')) return;
-  const conf=document.createElement('div'); conf.className='delete-confirm';
-  conf.innerHTML=`¿Eliminar conversación?
-    <button class="confirm-yes" data-yes="${id}">Eliminar</button>
-    <button class="confirm-no" data-no="${id}">Cancelar</button>`;
-  card.appendChild(conf);
-  conf.querySelector('.confirm-yes').addEventListener('click',async (e)=>{
-    e.stopPropagation();
-    state.history=state.history.filter(h=>h.id!==id);
-    if(state.currentHistoryId===id) state.currentHistoryId=null;
-    await saveHistory();
-    renderHistory();
-  });
-  conf.querySelector('.confirm-no').addEventListener('click',(e)=>{
-    e.stopPropagation();
-    conf.remove();
+async function deleteHistoryItem(id){
+  const idx=state.history.findIndex(h=>h.id===id);
+  if(idx<0) return;
+  const [removed]=state.history.splice(idx,1);
+  const wasCurrent=state.currentHistoryId===id;
+  if(wasCurrent) state.currentHistoryId=null;
+  await saveHistory();
+  renderHistory();
+  showUndoToast('Conversación eliminada.',async()=>{
+    state.history.splice(Math.min(idx,state.history.length),0,removed);
+    if(wasCurrent) state.currentHistoryId=id;
+    await saveHistory(); renderHistory();
   });
 }
 
@@ -1635,7 +1654,6 @@ function setMode(mode){
   el.historyPanel.style.display='none';
 
   updateActionBar();
-  refreshYTChips();
   const descs={
     chat:'Chatea con tu modelo de IA sobre cualquier tema o sobre la página actual.',
     summarize:'Obtén un resumen estructurado de la página que estás visitando.',
@@ -1667,7 +1685,7 @@ function updateActionBar(){
         Resumir selección
       </button>${base}`;
     $('btnSumPage')?.addEventListener('click',summarizePage);
-    $('btnSumSel')?.addEventListener('click',summarizeSelection);
+    $('btnSumSel')?.addEventListener('click',()=>summarizeSelection());
   } else if(state.mode==='research'){
     el.actionBar.innerHTML=`
       <button class="chip" id="btnResearch">
@@ -1677,28 +1695,52 @@ function updateActionBar(){
     $('btnResearch')?.addEventListener('click',()=>startResearch());
   } else {
     el.actionBar.innerHTML=`
+      <span class="chip-group-label">Guardar</span>
+      <button class="chip chip-save" id="btnPagePDF">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Página en PDF
+      </button>
+      <button class="chip chip-save" id="btnCaptureConv" style="display:none" title="Guarda esta conversación con la IA como Markdown en Descargas/Picona-conversaciones">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>
+        Diálogo con IA (.md)
+      </button>
+      <span class="chip-group-label">Preguntar</span>
       <button class="chip" id="btnAskPage">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Sobre esta página
       </button>
       <button class="chip" id="btnExplainSel">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         Explicar selección
       </button>
       <button class="chip" id="btnCaptureImg">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         Extraer texto de imagen
-      </button>
-      <button class="chip" id="btnPagePDF">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-        Guardar página en PDF
       </button>${base}`;
     $('btnAskPage')?.addEventListener('click',askAboutPage);
     $('btnExplainSel')?.addEventListener('click',explainSelection);
     $('btnCaptureImg')?.addEventListener('click',captureAndExtract);
     $('btnPagePDF')?.addEventListener('click',exportPagePDF);
+    $('btnCaptureConv')?.addEventListener('click',captureConversation);
+    refreshContextChips();
   }
   $('btnNewChat')?.addEventListener('click',clearConversation);
+}
+
+// ── Botones según la página activa ───────────────────────────────
+const CHAT_HOSTS=/(^|\.)(chatgpt\.com|chat\.openai\.com|claude\.ai|perplexity\.ai|deepseek\.com|gemini\.google\.com|chat\.mistral\.ai|copilot\.microsoft\.com|poe\.com|grok\.com|chat\.qwen\.ai|kimi\.com|meta\.ai|huggingface\.co|lmarena\.ai)$/i;
+function isChatPage(url){
+  try{
+    const u=new URL(url);
+    if(CHAT_HOSTS.test(u.hostname)) return true;
+    // Interfaces locales de modelos abiertos (Open WebUI, LM Studio…)
+    return /^(localhost|127\.0\.0\.1)$/.test(u.hostname);
+  }catch{ return false; }
+}
+async function refreshContextChips(){
+  const btn=$('btnCaptureConv'); if(!btn) return;
+  const r=await chrome.runtime.sendMessage({type:'GET_CURRENT_TAB'}).catch(()=>null);
+  btn.style.display=isChatPage(r?.tab?.url||'')?'':'none';
 }
 
 // ── Tabs list (research) ─────────────────────────────────────────
@@ -1725,36 +1767,38 @@ async function loadTabs(){
 }
 
 // ── LLM streaming ─────────────────────────────────────────────────
-async function streamLLM(messages,onChunk,onDone,onError){
+async function streamLLM(messages,onChunk,onDone,onError,signal){
   const prov=getActive();
   if(!prov){onError('No hay modelo activo.');return;}
   const tmpl=API_TEMPLATES[prov.type];
   if(!tmpl){onError('Tipo de proveedor desconocido.');return;}
   try{
-    if(tmpl.type==='anthropic')  await streamAnthropic(prov,tmpl,messages,onChunk,onDone,onError);
-    else if(tmpl.type==='gemini') await streamGemini(prov,tmpl,messages,onChunk,onDone,onError);
-    else if(tmpl.type==='ollama') await streamOllama(prov,tmpl,messages,onChunk,onDone,onError);
-    else                          await streamCompat(prov,tmpl,messages,onChunk,onDone,onError);
+    const sig=signal||state.abortCtrl?.signal;
+    if(tmpl.type==='anthropic')  await streamAnthropic(prov,tmpl,messages,onChunk,onDone,onError,sig);
+    else if(tmpl.type==='gemini') await streamGemini(prov,tmpl,messages,onChunk,onDone,onError,sig);
+    else if(tmpl.type==='ollama') await streamOllama(prov,tmpl,messages,onChunk,onDone,onError,sig);
+    else                          await streamCompat(prov,tmpl,messages,onChunk,onDone,onError,sig);
   }catch(e){onError(e.message||'Error desconocido');}
 }
 
-async function streamCompat(prov,tmpl,msgs,onChunk,onDone,onError){
+async function streamCompat(prov,tmpl,msgs,onChunk,onDone,onError,signal){
   const url=prov.baseUrl?`${prov.baseUrl.replace(/\/$/,'')}/chat/completions`:tmpl.apiUrl;
+  if(!url) throw new Error('Falta la URL base de la API personalizada. Edítala en Configuración.');
   const r=await fetch(url,{method:'POST',headers:tmpl.buildHeaders(prov),
     body:JSON.stringify(tmpl.buildBody(msgs,prov.model,true)),
-    signal:state.abortCtrl?.signal});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    signal});
+  if(!r.ok) throw new Error(await apiErrorText(r,prov));
   await readSSE(r,data=>{
     if(data==='[DONE]'){onDone();return true;}
     try{const c=tmpl.parseChunk(JSON.parse(data));if(c)onChunk(c);}catch{}
   },onDone);
 }
 
-async function streamAnthropic(prov,tmpl,msgs,onChunk,onDone,onError){
+async function streamAnthropic(prov,tmpl,msgs,onChunk,onDone,onError,signal){
   const r=await fetch(tmpl.apiUrl,{method:'POST',headers:tmpl.buildHeaders(prov),
     body:JSON.stringify(tmpl.buildBody(msgs,prov.model,true)),
-    signal:state.abortCtrl?.signal});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    signal});
+  if(!r.ok) throw new Error(await apiErrorText(r,prov));
   await readSSE(r,data=>{
     try{const p=JSON.parse(data);
       if(p.type==='message_stop'){onDone();return true;}
@@ -1763,28 +1807,55 @@ async function streamAnthropic(prov,tmpl,msgs,onChunk,onDone,onError){
   },onDone);
 }
 
-async function streamGemini(prov,tmpl,msgs,onChunk,onDone,onError){
+async function streamGemini(prov,tmpl,msgs,onChunk,onDone,onError,signal){
   const r=await fetch(tmpl.buildUrl(prov),{method:'POST',headers:tmpl.buildHeaders(prov),
     body:JSON.stringify(tmpl.buildBody(msgs)),
-    signal:state.abortCtrl?.signal});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    signal});
+  if(!r.ok) throw new Error(await apiErrorText(r,prov));
   await readSSE(r,data=>{try{const c=tmpl.parseChunk(JSON.parse(data));if(c)onChunk(c);}catch{}},onDone);
 }
 
-async function streamOllama(prov,tmpl,msgs,onChunk,onDone,onError){
+async function streamOllama(prov,tmpl,msgs,onChunk,onDone,onError,signal){
   const r=await fetch(tmpl.buildUrl(prov),{method:'POST',headers:tmpl.buildHeaders(prov),
     body:JSON.stringify(tmpl.buildBody(msgs,prov.model,true)),
-    signal:state.abortCtrl?.signal});
-  if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    signal});
+  if(!r.ok) throw new Error(await apiErrorText(r,prov));
   const reader=r.body.getReader(),decoder=new TextDecoder();
+  let buf='';
+  const handle=line=>{
+    if(!line.trim()) return false;
+    try{const p=JSON.parse(line);const c=p.message?.content||'';if(c)onChunk(c);if(p.done){onDone();return true;}}catch{}
+    return false;
+  };
   while(true){
     let rd,value;
     try{({done:rd,value}=await reader.read());}catch(e){onDone();return;}
-    if(rd){onDone();break;}
-    for(const line of decoder.decode(value).split('\n').filter(l=>l.trim())){
-      try{const p=JSON.parse(line);const c=p.message?.content||'';if(c)onChunk(c);if(p.done){onDone();return;}}catch{}
-    }
+    if(rd){ if(handle(buf)) return; onDone(); break; }
+    // Una línea JSON puede llegar partida entre dos paquetes: conservar el resto en el búfer
+    buf+=decoder.decode(value,{stream:true});
+    const lines=buf.split('\n'); buf=lines.pop()||'';
+    for(const line of lines){ if(handle(line)) return; }
   }
+}
+
+// Traduce los errores del proveedor a algo que se pueda resolver
+async function apiErrorText(r,prov){
+  const raw=await r.text().catch(()=>'');
+  let msg='';
+  try{ const e=JSON.parse(raw); msg=e.error?.message||e.message||(typeof e.error==='string'?e.error:''); }catch{ msg=raw.slice(0,200); }
+  const tmpl=API_TEMPLATES[prov?.type]||{};
+  const who=tmpl.label||'el proveedor';
+  const hints={
+    400:`${who} rechazó la solicitud. Puede que el modelo "${prov?.model}" no acepte este tipo de mensaje; prueba otro modelo.`,
+    401:`${who} no reconoce la clave. Cada clave sirve solo con su proveedor: una clave de OpenRouter debe configurarse como "OpenRouter", no como OpenAI, Anthropic o Gemini.`,
+    402:`Sin saldo suficiente en ${who} para "${prov?.model}". Elige un modelo gratuito (en OpenRouter terminan en ":free") o agrega créditos a tu cuenta.`,
+    403:`${who} no permite usar "${prov?.model}" con esta clave (región, plan o moderación).`,
+    404:`${who} no encontró el modelo "${prov?.model}". Pulsa "Cargar modelos disponibles" en Configuración y elige uno de la lista.`,
+    408:`${who} tardó demasiado en responder. Intenta de nuevo.`,
+    429:`Llegaste al límite de uso de ${who} (frecuente en modelos gratuitos). Espera un momento o elige otro modelo.`
+  };
+  const hint=hints[r.status]||(r.status>=500?`${who} tiene un problema temporal (error ${r.status}). Intenta en unos minutos o con otro modelo.`:'');
+  return [hint, msg?`Detalle: ${msg}`:`HTTP ${r.status}`].filter(Boolean).join('\n');
 }
 
 async function readSSE(resp,onData,onDone){
@@ -1836,11 +1907,7 @@ async function callWithMessages(extra,customLabel){
   setUILoading(true);
 
   const history=state.messages.filter(m=>m.role!=='system').slice(-20).map(m=>({role:m.role,content:m.content}));
-  let messages=extra?[...history.slice(0,-extra.length),...extra]:history;
-  // Contexto de video de YouTube activo → inyectar transcripción como system
-  if(state.videoContext && state.ytCache){
-    messages=[{role:'system',content:`El usuario está viendo este video de YouTube. Responde sus preguntas basándote en la transcripción.\nVideo: "${state.ytCache.title}"\n\nTranscripción:\n${ytTranscriptText(state.ytCache,12000)}`},...messages];
-  }
+  const messages=extra?[...history.slice(0,-extra.length),...extra]:history;
 
   const aid=uid();
   const msgObj={id:aid,role:'assistant',content:'',ts:Date.now()};
@@ -1854,10 +1921,13 @@ async function callWithMessages(extra,customLabel){
   const bubble=el.messages.querySelector(`[data-id="${aid}"] .msg-bubble`);
   if(bubble) bubble.innerHTML=thinkingHTML(customLabel||thinkingLabel(prov));
 
+  let finished=false;
   const finish=()=>{
+    if(finished) return; finished=true;
     state.isLoading=false; state.abortCtrl=null; setUILoading(false);
     const m=state.messages.find(x=>x.id===aid);
     if(m && !m.content.trim() && bubble) bubble.innerHTML='<em>(sin respuesta)</em>';
+    saveCurrentConversation().catch(()=>{});   // no depender de que se cierre el panel
   };
   try{
     await streamLLM(messages,(chunk)=>updateStream(aid,chunk),finish,
@@ -1890,7 +1960,7 @@ function setUILoading(v){
   if(!v) el.sendBtn.disabled=!el.userInput.value.trim();
 }
 
-// ── Subscription launch path ─────────────────────────────────────
+// ── Enviar mensaje ───────────────────────────────────────────────
 async function sendMessage(){
   // When loading, the button acts as "stop"
   if(state.isLoading){ stopGeneration(); return; }
@@ -1930,13 +2000,16 @@ async function summarizePage(){
 await callWithMessages([{role:'user',content:prompt}]);
 }
 
-async function summarizeSelection(){
+async function summarizeSelection(textArg){
   const prov=getActive(); if(!prov){showError('Configura un modelo primero.');return;}
-  const{selectedText}=await chrome.storage.session.get('selectedText');
-  if(!selectedText){showError('No hay texto seleccionado.');return;}
+  // La selección llega con la acción (barra flotante) o se pide a la pestaña activa
+  const selectedText=(typeof textArg==='string'&&textArg.trim())?textArg.trim():await getSelectedText();
+  if(!selectedText){showError('No hay texto seleccionado en la página.');return;}
   const extra=el.userInput.value.trim(); el.userInput.value='';
-  const prompt=extra?`${extra}\n\nTexto: "${selectedText}"`:`Resume de forma concisa:\n\n"${selectedText}"`;
-  const display=`📝 Resumir: "${selectedText.slice(0,60)}…"`;
+  // Mismo criterio que "Resumir página": resumen estructurado, proporcional a la extensión del texto
+  const base='Proporciona un resumen claro y estructurado del siguiente texto. Incluye los puntos principales, las ideas clave y las conclusiones. Ajusta la extensión a la del texto: si es breve, basta un párrafo; si es largo, organízalo en apartados.';
+  const prompt=`${extra||base}\n\nTexto:\n---\n${selectedText}\n---`;
+  const display=`📝 Resumir: "${selectedText.slice(0,60)}${selectedText.length>60?'…':''}"`;
   addMessage('user',display);
 await callWithMessages([{role:'user',content:prompt}],'Resumiendo la selección…');
 }
@@ -1948,6 +2021,9 @@ async function getSelectedText(){
     if(tab?.tab?.id){
       const r=await chrome.tabs.sendMessage(tab.tab.id,{type:'GET_SELECTION'}).catch(()=>null);
       if(r?.text) return r.text;
+      // Respaldo: páginas abiertas antes de instalar/actualizar Picona no tienen el script de contenido
+      const x=await chrome.scripting.executeScript({target:{tabId:tab.tab.id},func:()=>String(getSelection()||'').trim()}).catch(()=>null);
+      if(x?.[0]?.result) return x[0].result;
     }
   }catch{}
   const{selectedText}=await chrome.storage.session.get('selectedText');
@@ -2012,9 +2088,11 @@ async function startResearch(){
   const ids=state.selectedTabIds.size>0?[...state.selectedTabIds]:state.allTabs.map(t=>t.id);
   if(!ids.length){showError('No hay pestañas seleccionadas.');return;}
   el.userInput.value=''; setMode('chat');
-  addMessage('system',`🔍 Analizando ${ids.length} pestaña(s)…`);
+  const MAX_TABS=8;
+  if(ids.length>MAX_TABS) showToast(`Se analizarán las primeras ${MAX_TABS} de ${ids.length} pestañas (límite para no exceder el contexto del modelo).`);
+  addMessage('system',`🔍 Analizando ${Math.min(ids.length,MAX_TABS)} pestaña(s)…`);
   const contents=[];
-  for(const id of ids.slice(0,8)){
+  for(const id of ids.slice(0,MAX_TABS)){
     try{const r=await chrome.runtime.sendMessage({type:'GET_PAGE_CONTENT',tabId:id});
       if(r?.success)contents.push(`### [${r.data.title}](${r.data.url})\n${r.data.content.slice(0,6000)}`);}
     catch{}
@@ -2043,7 +2121,7 @@ async function translateContent(inputText){
   }
   el.userInput.value='';
 
-  if(state.bilingualView && prov.connType!=='subscription'){
+  if(state.bilingualView){
     await translateBilingual(textToTranslate);
   } else {
     await translateSimple(textToTranslate,prov);
@@ -2119,6 +2197,7 @@ ${paragraphs.map((p,i)=>`${i+1}) ${p}`).join('\n')}`;
       m.bilingual={paragraphs,translations,lang};
     }
     finish();
+    saveCurrentConversation().catch(()=>{});
   }, (err)=>{
     if(err && !err.includes('abort') && !err.includes('AbortError')){
       if(bubble) bubble.innerHTML=`⚠️ <strong>Error:</strong> ${esc(err)}`;
@@ -2279,6 +2358,7 @@ function resetForm(){
   el.customModelInput.value=''; el.customModelInput.style.display='none';
   el.apiKeyRow.style.display='flex'; el.baseUrlRow.style.display='none';
   el.keyHintLink.style.display='none';
+  el.fetchModelsBtn.style.display='none';
 }
 
 function setFormConnType(){ /* solo API en v2.6 */ if(el.apiFields) el.apiFields.style.display='flex'; }
@@ -2295,10 +2375,11 @@ function onApiTypeChange(){
     el.keyHintLink.textContent=tmpl.keyHintLabel||'¿Dónde obtengo mi API key? ↗';
     el.keyHintLink.style.display='';
   } else { el.keyHintLink.style.display='none'; }
+  el.fetchModelsBtn.style.display='';
   if(tmpl.models?.length){
     el.modelSelect.innerHTML=tmpl.models.map(m=>{
       const lbl=tmpl.modelLabels?.[m]||m;
-      return `<option value="${m}">${lbl}</option>`;
+      return `<option value="${esc(m)}">${esc(lbl)}</option>`;
     }).join('')+'<option value="__custom">Modelo personalizado…</option>';
     el.customModelInput.style.display='none';
   } else {
@@ -2309,21 +2390,71 @@ function onApiTypeChange(){
 
 // (funciones de suscripción web eliminadas)
 
+// ── Cargar la lista de modelos que ofrece el proveedor con la clave del usuario ──
+function modelsEndpoint(type,baseUrl){
+  const tmpl=API_TEMPLATES[type]; if(!tmpl) return null;
+  if(type==='ollama') return `${(baseUrl||'http://localhost:11434').replace(/\/$/,'')}/api/tags`;
+  if(type==='custom') return baseUrl?`${baseUrl.replace(/\/$/,'')}/models`:null;
+  return tmpl.modelsUrl||null;
+}
+async function fetchProviderModels(){
+  const type=el.providerType.value;
+  const tmpl=API_TEMPLATES[type];
+  if(!tmpl){ showError('Selecciona un proveedor.'); return; }
+  const apiKey=el.apiKeyInput.value.trim();
+  const baseUrl=el.baseUrlInput.value.trim();
+  if(tmpl.keyRequired && !apiKey){ showError('Pega primero tu API key.'); return; }
+  const url=modelsEndpoint(type,baseUrl);
+  if(!url){ showError('Escribe primero la URL base.'); return; }
+  const btn=el.fetchModelsBtn; const old=btn.textContent;
+  btn.disabled=true; btn.textContent='Consultando modelos…';
+  try{
+    const headers=tmpl.buildHeaders({apiKey});
+    delete headers['Content-Type'];
+    const r=await fetch(url+(type==='gemini'?'?pageSize=200':''),{headers});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${r.status}`); }
+    const d=await r.json();
+    let ids=[];
+    if(type==='gemini') ids=(d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>String(m.name||'').replace(/^models\//,''));
+    else if(type==='ollama') ids=(d.models||[]).map(m=>m.name||m.model);
+    else ids=(d.data||[]).map(m=>m.id);
+    // OpenRouter informa el precio: marcar los modelos gratuitos
+    const free=new Set(type==='openrouter'?(d.data||[]).filter(m=>m.pricing&&Number(m.pricing.prompt)===0&&Number(m.pricing.completion)===0).map(m=>m.id):[]);
+    ids=[...new Set(ids.filter(Boolean))].sort();
+    if(!ids.length) throw new Error('El proveedor no devolvió modelos.');
+    const current=el.modelSelect.value;
+    ids.sort((a,b)=>(free.has(b)-free.has(a))||a.localeCompare(b));   // gratuitos primero
+    el.modelSelect.innerHTML=ids.map(m=>`<option value="${esc(m)}">${free.has(m)?'★ gratis · ':''}${esc(tmpl.modelLabels?.[m]||m)}</option>`).join('')+'<option value="__custom">Modelo personalizado…</option>';
+    if(ids.includes(current)) el.modelSelect.value=current;
+    el.customModelInput.style.display='none';
+    showToast(`✓ ${ids.length} modelo${ids.length===1?'':'s'} disponible${ids.length===1?'':'s'}.`);
+  }catch(e){
+    showError('No se pudo obtener la lista de modelos: '+e.message);
+  }finally{
+    btn.disabled=false; btn.textContent=old;
+  }
+}
+
 async function saveProvider(){
   // Solo soportamos API Key por ahora - se elimina branch de suscripción web
   const type=el.providerType.value;
   if(!type){showError('Selecciona un proveedor.');return;}
   const tmpl=API_TEMPLATES[type];
+  if(!tmpl){showError('Proveedor no reconocido.');return;}
   const apiKey=el.apiKeyInput.value.trim();
   if(tmpl.keyRequired&&!apiKey){showError('La API Key es obligatoria.');return;}
   const mVal=el.modelSelect.value;
   const model=mVal==='__custom'||!mVal?el.customModelInput.value.trim():mVal;
   if(!model){showError('Selecciona o escribe un modelo.');return;}
+  const baseUrl=el.baseUrlInput.value.trim();
+  if(type==='custom' && !/^https?:\/\/\S+/i.test(baseUrl)){
+    showError('Escribe la URL base de tu API personalizada (por ejemplo https://api.miservicio.com/v1).');return;
+  }
   const provider={
     id:state.editingProviderId||uid(),
     connType:'api', type, apiKey, model,
     nickname:el.nicknameInput.value.trim(),
-    baseUrl:el.baseUrlInput.value.trim()
+    baseUrl
   };
   upsertProvider(provider);
 }
@@ -2388,16 +2519,38 @@ function closeDropdown(){
 
 // ── Error toast ───────────────────────────────────────────────────
 function showError(msg){
-  // Remove any existing toast first
+  clearSystemMsgs();   // no dejar mensajes "⏳ Obteniendo…" colgados tras un error
   document.querySelector('.error-toast')?.remove();
   const t=document.createElement('div'); t.className='error-toast'; t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),4000);
+  t.setAttribute('role','alert');
+  document.body.appendChild(t); setTimeout(()=>t.remove(),Math.max(4000,msg.length*55));
 }
 
-function showToast(msg){
+function showToast(msg,ms){
   document.querySelector('.error-toast')?.remove();
   const t=document.createElement('div'); t.className='error-toast success'; t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),2400);
+  t.setAttribute('role','status');
+  document.body.appendChild(t); setTimeout(()=>t.remove(),ms||Math.max(2400,msg.length*45));
+}
+
+// Aviso con botón "Deshacer" (para borrados)
+function showUndoToast(msg,onUndo,ms=6000){
+  document.querySelector('.error-toast')?.remove();
+  const t=document.createElement('div'); t.className='error-toast undo'; t.setAttribute('role','status');
+  const span=document.createElement('span'); span.textContent=msg;
+  const b=document.createElement('button'); b.className='toast-undo'; b.type='button'; b.textContent='Deshacer';
+  let undone=false;
+  b.addEventListener('click',async()=>{ if(undone) return; undone=true; t.remove(); await onUndo(); });
+  t.append(span,b); document.body.appendChild(t);
+  setTimeout(()=>t.remove(),ms);
+}
+
+// Quitar mensajes de sistema temporales ("⏳ Obteniendo contenido…")
+function clearSystemMsgs(){
+  if(!state.messages.some(m=>m.role==='system')) return;
+  state.messages=state.messages.filter(m=>m.role!=='system');
+  el.messages.querySelectorAll('.msg.system').forEach(n=>n.remove());
+  if(!state.messages.length) el.welcomeScreen.style.display='';
 }
 
 // ── New conversation ──────────────────────────────────────────────
@@ -2455,7 +2608,7 @@ async function checkPending(){
     case 'picona-summarize-sel':
       setMode('summarize');
       el.userInput.value='';
-      await summarizeSelection();
+      await summarizeSelection(a.text||'');
       break;
     case 'picona-ask':
       setMode('chat');
@@ -2469,7 +2622,68 @@ async function checkPending(){
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+// ── Manual de usuario interactivo ───────────────────────────────
+const MANUAL_STEPS = [
+  { n:'Paso 1 de 6', t:'Conecta tu IA', d:'Picona funciona con tu propia clave de API. Entra a Configuración (el engranaje), elige un proveedor, pega tu clave y selecciona un modelo. La clave se guarda solo en tu navegador.' },
+  { n:'Paso 2 de 6', t:'Guarda lo importante', d:'El grupo Guardar es el de uso más frecuente: exporta la página como PDF en modo lectura, o guarda el diálogo con la IA en Markdown, listo para tu bóveda de Obsidian.' },
+  { n:'Paso 3 de 6', t:'Pregunta sobre lo que lees', d:'Con "Sobre esta página" la IA toma el contenido de lo que consultas como contexto. "Explicar selección" se enfoca en un fragmento, y "Extraer texto de imagen" lee capturas. Al seleccionar texto en cualquier página, la barra flotante también ofrece "Leer": escucharás el texto en español o inglés mientras cada palabra se resalta.' },
+  { n:'Paso 4 de 6', t:'Transforma la página', d:'"Resumir", "Investigar" (varias pestañas a la vez) y "Traducir" (vista bilingüe) trabajan sobre la página activa o tu selección, sin salir del panel.' },
+  { n:'Paso 5 de 6', t:'Registra en memos', d:'Crea memos con procedencia: libres, de página (con fuente y cita) o de diario. Etiquétalos, conéctalos en la red y deja que la IA sugiera vínculos, siempre con tu aprobación.' },
+  { n:'Paso 6 de 6', t:'Exporta y conserva', d:'Lleva tus memos a Markdown, Obsidian, CSV o JSON. Exporta un respaldo de vez en cuando, sobre todo si cambias de equipo. Tus datos siempre son tuyos.' }
+];
+let manualStep = 0;
+
+function initManual(){
+  const overlay = $('manualOverlay');
+  if(!overlay) return;
+  const stepsEl = $('manualSteps');
+  const dotsEl = $('manualDots');
+  // Construir pasos y puntos
+  stepsEl.innerHTML = MANUAL_STEPS.map((s,i)=>`
+    <div class="manual-step ${i===0?'show':''}" data-step="${i}">
+      <div class="manual-card">
+        <div class="manual-step-n">${s.n}</div>
+        <div class="manual-step-t">${s.t}</div>
+        <div class="manual-step-d">${s.d}</div>
+      </div>
+    </div>`).join('');
+  dotsEl.innerHTML = MANUAL_STEPS.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('');
+
+  const prev = $('manualPrev'), next = $('manualNext');
+  const render = ()=>{
+    stepsEl.querySelectorAll('.manual-step').forEach((s,i)=>s.classList.toggle('show',i===manualStep));
+    dotsEl.querySelectorAll('i').forEach((d,i)=>d.classList.toggle('on',i===manualStep));
+    prev.disabled = manualStep===0;
+    next.textContent = manualStep===MANUAL_STEPS.length-1 ? 'Terminar' : 'Siguiente';
+  };
+  const open = ()=>{ manualStep=0; render(); overlay.style.display='flex'; };
+  const close = ()=>{ overlay.style.display='none'; };
+
+  $('helpBtn')?.addEventListener('click',open);
+  $('manualClose')?.addEventListener('click',close);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) close(); });
+  next.addEventListener('click',()=>{ if(manualStep<MANUAL_STEPS.length-1){manualStep++;render();} else close(); });
+  prev.addEventListener('click',()=>{ if(manualStep>0){manualStep--;render();} });
+  $('manualPdf')?.addEventListener('click',()=>{
+    // Abrir el PDF del manual incluido en la extensión
+    chrome.tabs.create({ url: chrome.runtime.getURL('docs/manual_picona.pdf') });
+  });
+}
+
+// Botones de solo ícono: usar su título como etiqueta accesible (también los que se crean después)
+function labelIconButtons(root=document){
+  root.querySelectorAll?.('button[title]:not([aria-label])').forEach(b=>b.setAttribute('aria-label',b.title));
+}
+function watchA11y(){
+  labelIconButtons();
+  new MutationObserver(muts=>{
+    for(const m of muts) m.addedNodes.forEach(n=>{ if(n.nodeType===1){ if(n.matches?.('button[title]:not([aria-label])')) n.setAttribute('aria-label',n.title); labelIconButtons(n); } });
+  }).observe(document.body,{childList:true,subtree:true});
+}
+
 async function init(){
+  watchA11y();
+  try{ el.aboutVersion.textContent=`Picona v${chrome.runtime.getManifest().version}`; }catch{}
   await loadStorage(); await loadMemos(); await loadHistory(); await loadDiarioQs();
   updatePill(); setMode('chat');
   checkDiarioReminder();
@@ -2480,10 +2694,9 @@ async function init(){
     if(changes.pendingAction?.newValue) checkPending();
   });
 
-  // YouTube: refrescar chips al cambiar de pestaña o navegar
-  refreshYTChips();
-  chrome.tabs.onActivated.addListener(()=>refreshYTChips());
-  chrome.tabs.onUpdated.addListener((id,info)=>{ if(info.url||info.status==='complete') refreshYTChips(); });
+  // Botones que dependen de la página activa (p. ej. "Guardar diálogo" solo en sitios de chat con IA)
+  chrome.tabs.onActivated.addListener(()=>refreshContextChips());
+  chrome.tabs.onUpdated.addListener((id,info)=>{ if(info.url||info.status==='complete') refreshContextChips(); });
 
   // Mode tabs
   el.modeTabs.forEach(t=>t.addEventListener('click',()=>setMode(t.dataset.mode)));
@@ -2497,7 +2710,7 @@ async function init(){
 
   // Alt+N = new conversation
   document.addEventListener('keydown',e=>{
-    if(e.altKey&&e.key==='n'){e.preventDefault();clearConversation();}
+    if(e.altKey&&(e.code==='KeyN'||e.key==='n')){e.preventDefault();clearConversation();}
   });
 
   // Model pill / dropdown
@@ -2513,10 +2726,14 @@ async function init(){
   el.saveProviderBtn.addEventListener('click',saveProvider);
   el.setupBtn.addEventListener('click',openSettings);
 
+  // Manual de usuario
+  initManual();
+
   // Connection type toggle
 
   // API type change
   el.providerType.addEventListener('change',onApiTypeChange);
+  el.fetchModelsBtn.addEventListener('click',fetchProviderModels);
   el.modelSelect.addEventListener('change',()=>{
     el.customModelInput.style.display=el.modelSelect.value==='__custom'?'':'none';
   });
@@ -2536,7 +2753,7 @@ async function init(){
   el.qTranslate.addEventListener('click',()=>setMode('translate'));
 
   // Memos
-  el.memoNewBtn.addEventListener('click',()=>openMemoEditor(null));
+  el.memoNewBtn.addEventListener('click',()=>{ toggleGraph(false); openMemoEditor(null); });
   el.memoCancelBtn.addEventListener('click',closeMemoEditor);
   el.memoSaveBtn.addEventListener('click',saveMemo);
   el.memoSearch.addEventListener('input',()=>{
@@ -2562,23 +2779,36 @@ async function init(){
   el.memoTagInput.addEventListener('blur',addTagFromInput);
 
   // Group by
-  el.memoGroupBy.addEventListener('change',()=>{
-    state.memoGroupBy=el.memoGroupBy.value;
-    renderMemos();
-  });
-
   // Export menu
-  el.memoExportBtn.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    el.memoExportMenu.style.display=el.memoExportMenu.style.display==='none'?'flex':'none';
-  });
-  el.memoExportMenu.querySelectorAll('.export-opt').forEach(btn=>{
-    btn.addEventListener('click',()=>exportMemos(btn.dataset.fmt));
+  // Menús desplegables: "Nuevo ▾" y "Más ⋯"
+  const menus=[[el.memoNewMenuBtn,el.memoNewMenu],[el.memoExportBtn,el.memoExportMenu]];
+  const closeMenus=()=>menus.forEach(([b,m])=>{ m.style.display='none'; b.setAttribute('aria-expanded','false'); });
+  menus.forEach(([btn,menu])=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const open=menu.style.display==='none';
+      closeMenus();
+      if(open){ menu.style.display='flex'; btn.setAttribute('aria-expanded','true'); menu.querySelector('button')?.focus(); }
+    });
+    menu.addEventListener('click',(e)=>{ if(e.target.closest('button')) closeMenus(); });
   });
   document.addEventListener('click',(e)=>{
-    if(!el.memoExportMenu.contains(e.target)&&e.target!==el.memoExportBtn){
-      el.memoExportMenu.style.display='none';
-    }
+    if(!menus.some(([b,m])=>m.contains(e.target)||b.contains(e.target))) closeMenus();
+  });
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeMenus(); });
+  el.memoExportMenu.querySelectorAll('[data-fmt]').forEach(btn=>{
+    btn.addEventListener('click',()=>exportMemos(btn.dataset.fmt));
+  });
+  el.memoNewMenu.querySelectorAll('[data-new]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ toggleGraph(false); openMemoEditor(null); setMemoFormType(btn.dataset.new); });
+  });
+  el.memoViewList.addEventListener('click',()=>toggleGraph(false));
+  // Opción: guardar cada memo como nota .md
+  const vaultChk=$('vaultAutosave');
+  vaultAutosaveOn().then(v=>{ vaultChk.checked=v; });
+  vaultChk.addEventListener('change',async()=>{
+    await chrome.storage.local.set({picona_vault_autosave:vaultChk.checked});
+    showToast(vaultChk.checked?'✓ Cada memo se guardará también como nota en Descargas/Picona-conversaciones/Memos/':'Los memos se guardarán solo dentro de Picona.');
   });
 
   // Anchor remove
@@ -2603,7 +2833,7 @@ async function init(){
   el.linksClose.addEventListener('click',()=>{ el.memoLinksBox.style.display='none'; });
 
   // Graph view
-  el.memoGraphBtn.addEventListener('click',toggleGraph);
+  el.memoGraphBtn.addEventListener('click',()=>toggleGraph(true));
 
   // Editor de preguntas del diario
   el.memoQsBtn.addEventListener('click',openQsEditor);

@@ -1,4 +1,4 @@
-// ─── Picona · background.js (v1.1) ─────────────────────────────
+// ─── Picona · background.js ─────────────────────────────────────
 
 // ── Open side panel on icon click ──────────────────────────────
 chrome.action.onClicked.addListener(async (tab) => {
@@ -29,9 +29,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   });
 });
 
-// ── Injection function (self-contained, no closure deps) ────────
-// (inyección de suscripción web eliminada en v2.6)
-
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Page content extraction
@@ -51,68 +48,222 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
 
-  // ── YouTube: extraer transcripción del video de la pestaña ──────
-  if (msg.type === 'GET_YT_TRANSCRIPT') {
+  // ── Capturar la conversación con un LLM de la página activa y guardarla como Markdown ──
+  if (msg.type === 'CAPTURE_CONVERSATION') {
     (async () => {
       try {
         const tabId = msg.tabId;
-        // Ejecutar en el mundo MAIN para acceder a ytInitialPlayerResponse
         const res = await chrome.scripting.executeScript({
           target: { tabId },
-          world: 'MAIN',
-          func: async () => {
-            try {
-              // 1) Obtener playerResponse (variable global o re-fetch del HTML)
-              let pr = window.ytInitialPlayerResponse;
-              const urlId = new URLSearchParams(location.search).get('v');
-              if (!pr || pr?.videoDetails?.videoId !== urlId) {
-                // SPA: la variable puede ser de un video anterior → re-obtener
-                const html = await fetch(location.href, { credentials: 'same-origin' }).then(r => r.text());
-                const m = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\})\s*;\s*(?:var\s|const\s|let\s|<\/script>)/s);
-                if (m) { try { pr = JSON.parse(m[1]); } catch {} }
-              }
-              if (!pr) return { ok: false, error: 'No se encontró información del video.' };
+          func: () => {
+            const host = location.hostname;
 
-              const tracks = pr?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-              if (!tracks || !tracks.length) {
-                return { ok: false, error: 'Este video no tiene transcripción/subtítulos disponibles.' };
-              }
-              // Preferir es > en > primero; preferir manual sobre ASR si hay empate de idioma
-              const score = t => {
-                let s = 0;
-                if (t.languageCode?.startsWith('es')) s += 20;
-                else if (t.languageCode?.startsWith('en')) s += 10;
-                if (t.kind !== 'asr') s += 5;
-                return s;
-              };
-              const track = [...tracks].sort((a, b) => score(b) - score(a))[0];
-
-              const url = track.baseUrl + '&fmt=json3';
-              const data = await fetch(url, { credentials: 'same-origin' }).then(r => r.json());
-              const segments = (data.events || [])
-                .filter(e => e.segs)
-                .map(e => ({
-                  t: e.tStartMs || 0,
-                  text: e.segs.map(x => x.utf8 || '').join('').replace(/\n/g, ' ').trim()
-                }))
-                .filter(x => x.text);
-
-              return {
-                ok: true,
-                videoId: pr.videoDetails?.videoId || urlId || '',
-                title: pr.videoDetails?.title || document.title,
-                author: pr.videoDetails?.author || '',
-                lengthSeconds: parseInt(pr.videoDetails?.lengthSeconds || '0', 10),
-                lang: track.languageCode || '',
-                isAuto: track.kind === 'asr',
-                segments
-              };
-            } catch (e) {
-              return { ok: false, error: 'Error al leer la transcripción: ' + e.message };
+            // Detectar plataforma y devolver su configuración de selectores
+            function detectPlatform() {
+              if (/chatgpt\.com|chat\.openai\.com/.test(host)) return 'ChatGPT';
+              if (/claude\.ai/.test(host)) return 'Claude';
+              if (/perplexity\.ai/.test(host)) return 'Perplexity';
+              if (/deepseek\.com/.test(host)) return 'DeepSeek';
+              return 'LLM OpenSource'; // genérico / otros (incl. modelos open source)
             }
+
+            const platform = detectPlatform();
+            const turns = [];
+            const allImages = []; // {url, marker} para descargar luego
+
+            // Extrae texto + imágenes de un nodo
+            function nodeToContent(el) {
+              if (!el) return { text: '', images: [] };
+              const clone = el.cloneNode(true);
+              clone.querySelectorAll('button,svg,[role=button]').forEach(n => n.remove());
+              // Tablas HTML → tablas Markdown (evita que salgan como texto corrido)
+              clone.querySelectorAll('table').forEach(tbl => {
+                const rows = [...tbl.querySelectorAll('tr')];
+                if (!rows.length) return;
+                const md = [];
+                rows.forEach((tr, ri) => {
+                  const cells = [...tr.querySelectorAll('th,td')].map(c =>
+                    (c.innerText || '').replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim()
+                  );
+                  if (!cells.length) return;
+                  md.push('| ' + cells.join(' | ') + ' |');
+                  if (ri === 0) md.push('| ' + cells.map(() => '---').join(' | ') + ' |');
+                });
+                tbl.replaceWith(document.createTextNode('\n\n' + md.join('\n') + '\n\n'));
+              });
+              // Bloques de código → cercas markdown
+              clone.querySelectorAll('pre').forEach(pre => {
+                const code = pre.innerText;
+                pre.replaceWith(document.createTextNode('\n```\n' + code + '\n```\n'));
+              });
+              // Recolectar imágenes reales del contenido (no íconos de interfaz)
+              const images = [];
+              clone.querySelectorAll('img').forEach(img => {
+                const src = img.currentSrc || img.src || '';
+                // Filtrar avatares, íconos y data-uris diminutos
+                const w = img.naturalWidth || img.width || 0;
+                if (!src || src.startsWith('data:') && src.length < 200) return;
+                if (/avatar|icon|favicon|logo|emoji/i.test(src)) return;
+                if (w && w < 48) return;
+                images.push(src);
+              });
+              const text = (clone.innerText || '').replace(/\u00a0/g, ' ').trim();
+              return { text, images };
+            }
+
+            function pushTurn(role, el) {
+              const { text, images } = nodeToContent(el);
+              if (!text && !images.length) return;
+              let body = text;
+              images.forEach(src => {
+                const idx = allImages.length;
+                const marker = `__PICONA_IMG_${idx}__`;
+                allImages.push({ url: src, marker });
+                body += `\n\n${marker}`;
+              });
+              turns.push({ role, text: body });
+            }
+
+            // ── Extracción específica por plataforma ──
+            if (platform === 'ChatGPT') {
+              document.querySelectorAll('[data-message-author-role]').forEach(el => {
+                const role = el.getAttribute('data-message-author-role') === 'user' ? 'Usuario' : 'Asistente';
+                pushTurn(role, el);
+              });
+            } else if (platform === 'Claude') {
+              // Estrategia robusta: recoger todos los nodos de mensaje (usuario y asistente)
+              // en su orden de aparición en el documento, con varios selectores de respaldo.
+              const sel = [
+                '[data-testid="user-message"]',
+                '.font-claude-message',
+                '.font-claude-response',
+                '[data-testid="assistant-message"]',
+                '[data-is-streaming] .font-claude-message'
+              ].join(',');
+              let nodes = [...document.querySelectorAll(sel)];
+              // Quitar nodos anidados dentro de otro nodo ya seleccionado (evita duplicados)
+              nodes = nodes.filter(n => !nodes.some(o => o !== n && o.contains(n)));
+              nodes.forEach(el => {
+                const isUser = el.matches('[data-testid="user-message"]') ||
+                               !!el.closest('[data-testid="user-message"]');
+                pushTurn(isUser ? 'Usuario' : 'Asistente', el);
+              });
+              // Respaldo: si no se detectó ningún asistente, reintentar por bloques de respuesta
+              if (!turns.some(t => t.role === 'Asistente')) {
+                document.querySelectorAll('.font-claude-message, .font-claude-response, [class*="message"][class*="assistant"]').forEach(el => {
+                  if (!nodes.includes(el)) pushTurn('Asistente', el);
+                });
+              }
+            } else if (platform === 'Perplexity' || platform === 'DeepSeek') {
+              const sel = platform === 'Perplexity'
+                ? '.prose, [class*="answer"], [class*="query"]'
+                : '[class*="_message"], [class*="message"]';
+              // Quedarse solo con los nodos más externos (evita duplicar mensajes anidados)
+              let nodes = [...document.querySelectorAll(sel)];
+              nodes = nodes.filter(n => !nodes.some(o => o !== n && o.contains(n)));
+              const seen = new Set();
+              nodes.forEach(el => {
+                const { text } = nodeToContent(el);
+                if (text && text.length > 2 && !seen.has(text)) { seen.add(text); pushTurn('', el); }
+              });
+            }
+
+            // ── Fallback genérico si no se obtuvo nada ──
+            if (!turns.length) {
+              let blocks = [...document.querySelectorAll('main p, main li, article p, [class*=message], [class*=msg], .prose')];
+              blocks = blocks.filter(n => !blocks.some(o => o !== n && o.contains(n)));
+              const seen = new Set();
+              blocks.forEach(b => {
+                const { text } = nodeToContent(b);
+                if (text && text.length > 15 && !seen.has(text)) { seen.add(text); pushTurn('', b); }
+              });
+            }
+
+            return {
+              ok: turns.length > 0,
+              platform,
+              title: (document.title || 'Conversación').replace(/\s*[-|–]\s*(ChatGPT|Claude|Perplexity|DeepSeek).*$/i, '').trim() || 'Conversación',
+              url: location.href,
+              turns,
+              images: allImages,
+              error: turns.length ? '' : 'No se reconoció una conversación en esta página.'
+            };
           }
         });
-        sendResponse(res?.[0]?.result || { ok: false, error: 'Sin respuesta del video.' });
+
+        const data = res?.[0]?.result;
+        if (!data || !data.ok) { sendResponse({ ok: false, error: data?.error || 'No se pudo capturar la conversación.' }); return; }
+
+        // ── Construir Markdown con frontmatter ──
+        const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+        const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const d = new Date();
+        const iso = d.toISOString();
+        const fechaLegible = `${dias[d.getDay()]}, ${meses[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}, ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        const safeTitle = (data.title || 'conversacion').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_').slice(0, 60);
+        const fileName = `${safeTitle}-${stamp}.md`;
+
+        const yq = v => JSON.stringify(String(v ?? ''));   // cadena YAML válida (entre comillas, escapada)
+        const fm = [
+          '---',
+          `titulo: ${yq(data.title)}`,
+          `plataforma: ${yq(data.platform)}`,
+          `fecha: ${iso}`,
+          `fecha_legible: ${yq(fechaLegible)}`,
+          `mensajes: ${data.turns.length}`,
+          `url: ${yq(data.url)}`,
+          `etiquetas:`,
+          `  - conversacion`,
+          `  - ${data.platform.toLowerCase().replace(/\s+/g,'-')}`,
+          '---',
+          ''
+        ].join('\n');
+
+        const folder = 'Picona-conversaciones';
+        const baseDir = `${folder}/${data.platform}`;
+
+        // ── Descargar imágenes (segunda iteración) y mapear marcadores → enlaces Obsidian ──
+        const imgReplace = {};
+        const images = data.images || [];
+        for (let i = 0; i < images.length; i++) {
+          const { url, marker } = images[i];
+          try {
+            // Inferir extensión
+            let ext = 'png';
+            const mExt = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i.exec(url);
+            if (mExt) ext = mExt[1].toLowerCase().replace('jpeg', 'jpg');
+            const imgName = `${safeTitle}-${stamp}-img${i + 1}.${ext}`;
+            const imgPath = `${baseDir}/images/${imgName}`;
+
+            // Descargar la imagen al subfolder images/ (puede fallar si la URL es temporal o requiere auth)
+            const id = await chrome.downloads.download({ url, filename: imgPath, saveAs: false, conflictAction: 'uniquify' });
+            // download() responde cuando la descarga EMPIEZA; esperar a que termine de verdad
+            const done = await waitDownload(id, 20000);
+            if (!done.ok) throw new Error(done.error || 'descarga incompleta');
+            // Obsidian referencia imágenes locales por nombre con ![[ ]] (usar el nombre final, por si se renombró)
+            const finalName = (done.filename || imgName).split(/[\\/]/).pop();
+            imgReplace[marker] = `![[${finalName}]]`;
+          } catch (e) {
+            // Si falla la descarga, dejar el enlace remoto como respaldo
+            imgReplace[marker] = `![imagen](${url})`;
+          }
+        }
+
+        const applyImg = (txt) => txt.replace(/__PICONA_IMG_\d+__/g, m => imgReplace[m] || '');
+
+        const body = data.turns.map(t => {
+          const head = t.role ? `### ${t.role}\n\n` : '';
+          return head + applyImg(t.text);
+        }).join('\n\n---\n\n');
+
+        const md = fm + `# ${data.title}\n\n> Fuente: ${data.url}\n> Capturado con Picona · ${fechaLegible}\n\n` + body + '\n';
+
+        // El panel lateral descarga el .md con una URL blob (sin el límite de tamaño de las URL data:)
+        const path = `${baseDir}/${fileName}`;
+        const savedImages = Object.values(imgReplace).filter(v => v.startsWith('![[')).length;
+        sendResponse({ ok: true, platform: data.platform, turns: data.turns.length, images: images.length, savedImages, path, md });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -150,9 +301,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             }
             const main = pickMain();
             const clone = main.cloneNode(true);
-            clone.querySelectorAll('script,style,nav,aside,footer,header,form,iframe,noscript,button,svg,.ad,[class*=ad-],[id*=ad-]').forEach(n => n.remove());
+            // Anuncios: nombres de clase/id que EMPIEZAN con "ad-" o contienen "advert"/"sponsor"
+            // (antes [class*=ad-] también borraba "thread-", "read-more", "head-"…)
+            clone.querySelectorAll([
+              'script','style','nav','aside','footer','header','form','iframe','noscript','button','svg',
+              '.ad','.ads','[class^="ad-"]','[class*=" ad-"]','[id^="ad-"]',
+              '[class*="advert"]','[id*="advert"]','[class*="sponsor"]','[aria-label="advertisement" i]'
+            ].join(',')).forEach(n => n.remove());
+            const BLOCK = 'h1,h2,h3,h4,p,li,blockquote,pre';
             const blocks = [];
-            clone.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre').forEach(el => {
+            clone.querySelectorAll(BLOCK).forEach(el => {
+              // Si ya está dentro de otro bloque capturado (p dentro de li o de blockquote), no repetirlo
+              if (el.parentElement && el.parentElement.closest(BLOCK)) return;
               const t = el.innerText.trim();
               if (t) blocks.push({ tag: el.tagName.toLowerCase(), text: t });
             });
@@ -272,3 +432,20 @@ chrome.runtime.onConnect.addListener((port) => {
     });
   });
 });
+
+// ── Esperar a que una descarga termine (o falle) ─────────────────
+function waitDownload(id, timeoutMs) {
+  return new Promise(resolve => {
+    let finished = false;
+    const end = (r) => { if (finished) return; finished = true; chrome.downloads.onChanged.removeListener(onCh); clearTimeout(t); resolve(r); };
+    const check = () => chrome.downloads.search({ id }).then(([it]) => {
+      if (!it) return end({ ok: false, error: 'no encontrada' });
+      if (it.state === 'complete') end({ ok: true, filename: it.filename });
+      else if (it.state === 'interrupted') end({ ok: false, error: it.error });
+    }).catch(() => {});
+    const onCh = (d) => { if (d.id === id && d.state) check(); };
+    chrome.downloads.onChanged.addListener(onCh);
+    const t = setTimeout(() => end({ ok: false, error: 'tiempo agotado' }), timeoutMs);
+    check();
+  });
+}
