@@ -4,11 +4,9 @@
 
 # Picona
 
-### De horas de navegación a pensamiento documentado y conectado
-
 *Extensión de navegador para investigación asistida por IA, con un sistema de notas de procedencia inspirado en el análisis cualitativo.*
 
-Prueba de concepto · Manifest V3 · Versión 2.7.2
+Prueba de concepto · Manifest V3 · Versión 2.10.1
 
 </div>
 
@@ -39,9 +37,9 @@ Esta orientación responde a una preocupación pedagógica más amplia: promover
 | **Traducción bilingüe** | Original y traducción intercalados por párrafo, para lectura académica en otros idiomas. |
 | **PDF en modo lectura** | Versión limpia (sin elementos accesorios) de la página, exportable a PDF. |
 | **Investigación multi-pestaña** | Síntesis conjunta de varias pestañas abiertas. |
-| **Análisis de videos** | Resumen, ideas clave con marcas de tiempo, esquema, transcripción y consulta sobre el contenido. |
-| **Barra flotante** | Acciones rápidas (explicar, traducir, resumir, guardar memo) al seleccionar texto. |
-| **Sistema de memos** | Notas con procedencia, etiquetas, proyectos, tipos (libre / de página / diario) y red de conexiones. |
+| **Barra flotante** | Acciones rápidas (explicar, traducir, resumir, escuchar, guardar memo) al seleccionar texto. |
+| **Lectura en voz alta** | Lee cualquier texto seleccionado, con la palabra resaltándose en la página y control de pausa, velocidad y voz. |
+| **Sistema de memos** | Notas con procedencia, etiquetas, proyectos, tipos (libre / de página / diario) y red de conexiones; cada memo se guarda además como archivo en la carpeta de Descargas. |
 | **Exportación** | Markdown, CSV, JSON, vault de Obsidian (con enlaces automáticos) y HTML enriquecido. |
 
 ## Capturas de pantalla
