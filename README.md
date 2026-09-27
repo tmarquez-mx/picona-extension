@@ -44,6 +44,17 @@ Esta orientación responde a una preocupación pedagógica más amplia: promover
 | **Sistema de memos** | Notas con procedencia, etiquetas, proyectos, tipos (libre / de página / diario) y red de conexiones. |
 | **Exportación** | Markdown, CSV, JSON, vault de Obsidian (con enlaces automáticos) y HTML enriquecido. |
 
+## Capturas de pantalla
+
+| | |
+|---|---|
+| ![Barra flotante](screenshots/01_barra_flotante.png) | ![Chat con la página](screenshots/02_chat_con_la_pagina.png) |
+| Barra flotante al seleccionar texto | Chat con el contexto de la página activa |
+| ![Traducción bilingüe](screenshots/03_traduccion_bilingue.png) | ![Sistema de memos](screenshots/04_sistema_de_memos.png) |
+| Traducción bilingüe por párrafo | Sistema de memos con procedencia |
+| ![Lectura en voz alta](screenshots/05_lectura_en_voz_alta.png) | |
+| Lectura en voz alta con resaltado en vivo | |
+
 ## Arquitectura y privacidad
 
 Picona está construida sobre **Manifest V3** y opera bajo un principio de **privacidad por diseño**:
